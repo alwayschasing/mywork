@@ -2,13 +2,13 @@
 # coding=utf-8
 
 import numpy as np
-import pandas as pd
 import cPickle as pickle
 def prepareData(input_path):
     fp = open(input_path,'r')
     users = {}; items = {}
     lu = 0 ; li = 0;
-    for line in fp.readlines():
+    lines = fp.readlines()
+    for line in lines:
         line = line.strip().split()
         u = line[0]
         i = line[1] 
@@ -19,12 +19,13 @@ def prepareData(input_path):
             items[i] = li
             li += 1
     u_i_mat = np.zeros((lu,li))
-    for line in fp.readlines():
+    for line in lines:
         line = line.strip().split()
         u = line[0]
         i = line[1]
         r = line[2]
         u_i_mat[users[u]][items[i]] = r
+        print u,i,u_i_mat[users[u]][items[i]]
     tmpdatapath = "/home/jack/workspace/graduation_project/tmpdata/u_i_matrix.csv"
     tmpusers = "/home/jack/workspace/graduation_project/tmpdata/users.csv"
     tmpitems = "/home/jack/workspace/graduation_project/tmpdata/items.csv"
@@ -51,35 +52,43 @@ def matrixFac():
     k = 20
     uMat = np.random.randn(m,k)
     iMat = np.random.randn(n,k)
-    buVec = np.mat(zeros(m))
-    biVec = np.mat(zeros(n))
+    buVec = np.zeros(m)
+    biVec = np.zeros(n)
     rating_num = 0
-    for i in rMat:
-        if i != 0:
-            rating_num += 1
-    mu = rMat.sum()/rating_num
+    sum = 0
+    for i in range(m):
+        for j in range(n):
+            if rMat[i][j] != 0:
+                rating_num += 1
+                sum += rMat[i][j]
+    mu = sum/rating_num
+    print mu
     #high parameters
-    epoch = 100; rate = 0.005; lam = 0.02
+    epoch = 5; rate = 0.005; lam = 0.02
 
-    rmse_3 = np.asarray([0,0,0])
-    for k in epoch:
-        errsum = 0
+    print m,n
+    for k in range(epoch):
+        loss = 0
         for i in range(m):
             for j in range(n):
                 if rMat[i][j] != 0:
-                    e_ui = rMat[i][j] - mu - buVec[i] - biVec[j] - uMat[i].dot(uMat[:][j])
-                    uMat[i] = uMat[i] - rate*(e_ui+lam*iMat[j])
-                    iMat[j] = iMat[j] - rate*(e_ui+lam*uMat[i])
-                    buVec[i] = buVec[i] - rate*(e_ui+lam*buVec[i])
-                    biVec[j] = biVec[j] - rate*(e_ui+lam*biVec[j])
-                    errsum += e_ui**2
-        rmse = (errsum/rating_num)**0.5
-        print "The %d epoch rmse is %f"%(k,rmse)
-        break
-        if rmse_3.sum()/3 - rmse < 0.0001:
-            break
-        rmse_3[k%3] = rmse 
+                    pu = uMat[i]
+                    qi = iMat[j]
+                    pu_qi = pu.dot(qi.T)
+                    e_ui = rMat[i][j] - mu - buVec[i] - biVec[j] - pu_qi
+                    loss += e_ui*e_ui
+                    uMat[i] = uMat[i] + rate*(e_ui*iMat[j]-lam*iMat[j])
+                    loss += lam*((uMat[i].sum())**2)
+                    iMat[j] = iMat[j] + rate*(e_ui*uMat[i]-lam*uMat[i])
+                    loss += lam*((iMat[j].sum())**2)
+                    buVec[i] = buVec[i] + rate*(e_ui-lam*buVec[i])
+                    loss += lam*(buVec[i]**2)
+                    biVec[j] = biVec[j] + rate*(e_ui-lam*biVec[j])
+                    loss += lam*(biVec[j]**2)
+                    loss *= 0.5
+        print "The %d epoch loss is %f"%(k,loss)
 
 if __name__ == "__main__":
-    input = "/home/jack/workspace/graduation_project/data/ml-100k/u.data"
-    prepareData(input) 
+    #input = "/home/jack/workspace/graduation_project/data/ml-100k/u.data"
+    #prepareData(input) 
+    matrixFac()
