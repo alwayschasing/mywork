@@ -51,7 +51,7 @@ def matrixFac(latentdim):
     rMat = np.loadtxt(fp_mat)
     m,n = rMat.shape    
     #k is the latent dimension
-    k = latentdim
+    k = int(latentdim)
     uMat = np.random.randn(m,k)
     iMat = np.random.randn(n,k)
     buVec = np.zeros(m)
@@ -97,8 +97,8 @@ def matrixFac(latentdim):
     return iMat  
     
 if __name__ == "__main__":
-    input = "/home/jack/workspace/graduation_project/data/ml-1m/userbased.trainMF.csv"
-    prepareData(input) 
-    #k = sys.argv[1] 
-    #imat = matrixFac(k)
-    #np.savetxt("./npimat"+k+".txt",imat)
+    #input = "/home/jack/workspace/graduation_project/data/ml-1m/userbased.trainMF.csv"
+    #prepareData(input) 
+    k = sys.argv[1] 
+    imat = matrixFac(k)
+    np.savetxt("./npimat"+k+".txt",imat)

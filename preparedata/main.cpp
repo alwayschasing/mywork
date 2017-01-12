@@ -15,6 +15,10 @@ int main(){
     int userhashsize = 6041;
     int itemhashsize = 3953;
     PrepareData getdata(datapath,userhashsize,itemhashsize);
+    IBasedData *item_based = getdata.getItemBasedData();
+    UBasedData *user_based = getdata.getUserBasedData();
+    ofstream outtrain("../data/ml-1m/itembased.train.csv")
+    /*
     UBasedData *user_based = getdata.getUserBasedData();
     //ofstream output("../data/ml-1m/userbased.csv",ofstream::out);
     ofstream outtrain("../data/ml-1m/userbased.train.csv");
@@ -48,6 +52,7 @@ int main(){
     outtrainMF.close();
     outtest.close();
     delete user_based;
+    */
     return 0;
 }
 
