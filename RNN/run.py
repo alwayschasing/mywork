@@ -24,7 +24,7 @@ def generateDataFromAutoencoder():
             seq.append(item_vectors[item_index[i]])
         sequences.append(seq)
     fpiv.close();fpid.close();fprd.close()
-    return sequences,item_vectors
+    return sequences
 
 def generateDataFromMF():
     pass
@@ -106,13 +106,16 @@ def knn(dataset,vec_list):
     return reslist
 
 def main():
-    traindata,dataset = generateDataFromAutoencoder()
+    traindata = generateDataFromAutoencoder()
     traindata = np.asarray(traindata)
-    dataset = np.asarray(dataset)
 
-    testdata,targets = generateTestData()
     model = trainRNN(traindata,n_step=9,hidden_size=200,lr=0.05)
-    recall = test(model,testdata,targets,dataset)
+    del traindata
+
+    fpiv = open(rootdir + "data/ml-1m/autoencoder/item_hidden_vector", "rb")
+    item_vectors = pickle.load(fpiv)
+    testdata, targets = generateTestData()
+    recall = test(model,testdata,targets,item_vectors)
     print "recall is %f"%recall
 
 if __name__ == "__main__":
