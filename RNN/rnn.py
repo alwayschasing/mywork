@@ -50,7 +50,7 @@ class LstmModel(object):
         while epoch < training_epoch:
             self.sess.run(optimizer,feed_dict={self.X:x,self.Y:y})
             epoch += 1
-            print "the %d epoch cost is %f"%(epoch,self.sell.run(self.cost))
+            print "the %d epoch cost is %f"%(epoch,self.sess.run(self.cost))
     def pred(self,testinput):
         return self.sess.run(self.outputs,feed_dict={self.X:testinput})
 
