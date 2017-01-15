@@ -29,7 +29,7 @@ class LstmModel(object):
 
         #losses = tf.contrib.legacy_seq2seq.sequence_loss_by_example()
         self.outputs = tf.reshape(tf.concat_v2(self.outputs, 1), [-1, hidden_size])
-        losses = tf.contrib.legacy_seq2seq.sequence_loss_by_example(
+        losses = tf.nn.seq2seq.sequence_loss_by_example(
             logits = [tf.reshape(self.outputs,[-1])],
             targets = [tf.reshape(self.Y,[-1])], 
             weights = [tf.ones([self.batch_size*self.n_step*hidden_size],dtype=tf.float32)],
