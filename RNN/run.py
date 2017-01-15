@@ -56,6 +56,9 @@ def trainRNN(traindata,n_step,hidden_size,lr):
 
     x = traindata[:,:-1,:]
     y = traindata[:,1:,:]
+    print batch_size
+    print y.shape
+    print y.shape
 
     rnn_model = LstmModel(batch_size,n_step,hidden_size,lr)
     training_epoch = 100
