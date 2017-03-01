@@ -39,7 +39,7 @@ class LstmModel(object):
             ) 
         self.cost = tf.div(tf.reduce_sum(losses,name='losses_sum'),self.batch_size,name='avgcost')
         self.sess = tf.Session()
-        self.init = tf.initialize_all_variables()
+        self.init = tf.global_variables_initializer()
     
     def ms_error(self,y_pre,y):
         return tf.square(tf.sub(y_pre,y))
@@ -48,9 +48,9 @@ class LstmModel(object):
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(self.cost)
         self.sess.run(self.init)
         while epoch < training_epoch:
-            self.sess.run(optimizer,feed_dict={self.X:x,self.Y:y})
+            _,cost = self.sess.run(optimizer,self.cost,feed_dict={self.X:x,self.Y:y})
             epoch += 1
-            print "the %d epoch cost is %f"%(epoch,self.sess.run(self.cost))
+            print "the %d epoch cost is %f"%(epoch,cost)
     def pred(self,testinput):
         return self.sess.run(self.outputs,feed_dict={self.X:testinput})
 
