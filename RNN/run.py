@@ -6,7 +6,7 @@ import numpy as np
 import csv
 from rnn import LstmModel
 
-rootdir = "/home/jack/workspace/graduation_project/"
+rootdir = "/home/lrh/graduation_project/"
 neighbor_k = 10
 
 #generate sequence data from autoencoder data
@@ -32,7 +32,7 @@ def generateDataFromMF():
 def generateDataFromEmbedding():
     pass
 
-def generateTestData():
+def generateTestData(item2vector,i_index):
     path = rootdir+"data/ml-1m/"
     input = list()
     targetlist = list()
@@ -40,13 +40,20 @@ def generateTestData():
         inputlines = csv.reader(fp)
         for line in inputlines:
             line = line[-9:] 
-            input.append(line)
+            tmp = list()
+            for i in line:
+                tmp.append(item2vector[i_index[i]])
+            input.append(tmp)
+
     with open(path+"userbased.test.csv","r") as fptest:
         targetlines = csv.reader(fptest)
         for line in targetlines:
-            targetlist.append(line)
+            targetlist.append(line[1:]) #去掉测试文件每行行首的用户id
     input = np.asarray(input)
     targetlist = np.asarray(targetlist)
+    print "had generate test data"
+    print "test data shape is"
+    print input.shape,targetlist.shape
     return input,targetlist
 
       
@@ -57,7 +64,7 @@ def trainRNN(traindata,n_step,hidden_size,lr):
     x = traindata[:,:-1,:]
     y = traindata[:,1:,:]
     print batch_size
-    print y.shape
+    print x.shape
     print y.shape
 
     rnn_model = LstmModel(batch_size,n_step,hidden_size,lr)
@@ -71,11 +78,18 @@ def trainRNN(traindata,n_step,hidden_size,lr):
 
 #test on the testdata by recall
 def test(model,input,targets,dataset):
+    print "be going to test"
     pred_res = model.pred(input)
+    print pred_res.shape
+    pred_res = pred_res.reshape(input.shape)
+    shape = pred_res.shape
+    print shape
+    pred_res = pred_res[:,-1,:] #预测结果是一个大小为9的序列，取最后一个值
+    pred_res = pred_res.ravel().reshape((shape[0],shape[2]))
     #the pred_items is lists of actual item ids for each user
     pred_items_indices=knn(dataset,pred_res)
     pred_items = list()
-    with open(rootdir+"data/autoencoder/index2item","rb") as fp_id2item:
+    with open(rootdir+"data/ml-1m/autoencoder/index2item","rb") as fp_id2item:
         index2item = pickle.load(fp_id2item)
         for each_u in pred_items_indices:
             ubasedpred = list()
@@ -94,7 +108,6 @@ def test(model,input,targets,dataset):
         recalls[u] = hit/denominator
         
     return recalls.sum()/n_valid
-
 def knn(dataset,vec_list):
     reslist = list() 
     totalsize = dataset.shape[0]
@@ -112,12 +125,14 @@ def main():
     traindata = generateDataFromAutoencoder()
     traindata = np.asarray(traindata)
 
-    model = trainRNN(traindata,n_step=9,hidden_size=200,lr=0.05)
+    model = trainRNN(traindata,n_step=9,hidden_size=10,lr=0.05)
     del traindata
 
     fpiv = open(rootdir + "data/ml-1m/autoencoder/item_hidden_vector", "rb")
+    fpid = open(rootdir + "data/ml-1m/autoencoder/item_index","rb")
+    i_index = pickle.load(fpid)
     item_vectors = pickle.load(fpiv)
-    testdata, targets = generateTestData()
+    testdata, targets = generateTestData(item_vectors,i_index)
     recall = test(model,testdata,targets,item_vectors)
     print "recall is %f"%recall
 
