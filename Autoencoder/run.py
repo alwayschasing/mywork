@@ -17,7 +17,7 @@ training_epoch = 500
 display_step = 10
 precost = sys.maxint
 encodernetwork = Autoencoder(n_input = n_user,
-                            n_hidden = 200,
+                            n_hidden = 10,
                             activation = tf.nn.softplus,
                             optimizer = tf.train.GradientDescentOptimizer(learning_rate = 0.005))
 
@@ -61,4 +61,6 @@ sp1.close()
 sp2.close()
 sp3.close()
 
+def generateTestData():
+    pass
 
