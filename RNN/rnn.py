@@ -45,12 +45,17 @@ class LstmModel(object):
         return tf.square(tf.sub(y_pre,y))
     def train(self,x,y,training_epoch):
         epoch = 0
+        threshold = 1 #the training_epoch
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(self.cost)
         self.sess.run(self.init)
+        _,cost = self.sess.run(optimizer,self.cost,feed_dict={self.X:x,self.Y:y})
+        precost = cost
         while epoch < training_epoch:
             _,cost = self.sess.run(optimizer,self.cost,feed_dict={self.X:x,self.Y:y})
             epoch += 1
             print "the %d epoch cost is %f"%(epoch,cost)
+            if precost-cost<threshold:
+                break
     def pred(self,testinput):
         return self.sess.run(self.outputs,feed_dict={self.X:testinput})
 
