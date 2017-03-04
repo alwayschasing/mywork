@@ -2,7 +2,6 @@
 # coding=utf-8
 
 import numpy as np
-import sys
 import cPickle as pickle
 from autoencoder import Autoencoder
 import tensorflow as tf
@@ -10,57 +9,60 @@ import tensorflow as tf
 fp = open("../data/ml-1m/itembased.train.csv","r")
 lines = fp.readlines()
 itemsize = len(lines)
-#the index of user in array
-userindex = pickle.load(open("../data/ml-1m/userindex","rb"))
-n_user = 6040
-training_epoch = 500
-display_step = 10
-precost = sys.maxint
-encodernetwork = Autoencoder(n_input = n_user,
-                            n_hidden = 10,
-                            activation = tf.nn.softplus,
-                            optimizer = tf.train.GradientDescentOptimizer(learning_rate = 0.005))
-
-X = np.zeros((itemsize,n_user),dtype = int)
 
 #build the map item to index
-item_index_X = dict()
+item_index = dict()
 #build the map index to item
 index2item = dict()
 
+user_index = dict()
+n_u = 0
+for line in lines:
+    line = line.strip().split(',')
+    l = len(line)
+    for i in range(1,l):
+        if user_index.has_key(line[i]):
+            continue
+        else: user_index[line[i]] = n_u 
+        n_u += 1
 
+#在数据集中出现的用户数量
+n_user = len(user_index)
+
+#训练数据集
+X = np.zeros((itemsize,n_user),dtype = int)
 for i in range(itemsize):
     line = lines[i].strip().split(',')
-    item_index_X[line[0]] = i
+    item_index[line[0]] = i
     index2item[i] = line[0]
     l = len(line)
     for j in range(1,l):
-        X[i][userindex[line[j]]] = 1
+        X[i][user_index[line[j]]] = 1
 
-for epoch in range(training_epoch):
-    cost = encodernetwork.fit(X)
-    #avg_cost += cost/itemsize
-    """
-    if precost < avg_cost:
-        print "training ends earlier"
-        break
-    else:
-        precost = avg_cost
-    """
-    if epoch%display_step == 0:
-        print "epoch %d cost=%f"%(epoch,cost)
+dimensions = [6040,20]
+encoder = Autoencoder(dimensions)
 
-item_hidden = encodernetwork.transform(X)
+#定义自动编码机的优化方法
+learning_rate = 0.005
+optimizer = tf.train.GradientDescentOptimizer(learning_rate)
+#optimizer = tf.train.AdamOptimizer(learning_rate)
+
+#建立session训练自动编码机，并使用
+train_epoch = 1000 
+sess = tf.Session()
+batch_size = len(X)
+encoder.fit(sess,X,optimizer,n_epoch=train_epoch,batch_size=batch_size)
+encoder_res = encoder.transform(sess,X)
+
+
 sp1 = open("../data/ml-1m/autoencoder/item_hidden_vector","wb")
 sp2 = open("../data/ml-1m/autoencoder/item_index","wb")
 sp3 = open("../data/ml-1m/autoencoder/index2item","wb")
-pickle.dump(item_hidden,sp1)
-pickle.dump(item_index_X,sp2)
+pickle.dump(encoder_res,sp1)
+pickle.dump(item_index,sp2)
 pickle.dump(index2item,sp3)
 sp1.close()
 sp2.close()
 sp3.close()
 
-def generateTestData():
-    pass
 
