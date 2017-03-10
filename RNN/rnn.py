@@ -108,3 +108,4 @@ class LSTM(object):
 if __name__ == "__main__":
 
     model = LSTM(n_step=9,hidden_size=10,n_user=6040)
+    #test
