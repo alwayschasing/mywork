@@ -23,16 +23,18 @@ int main(){
     ofstream outtrain("../data/ml-1m/userbased.train.csv");
     ofstream outtrainMF("../data/ml-1m/userbased.trainMF.csv");
     ofstream outtest("../data/ml-1m/userbased.test.csv");
+    ofstream outtestMF("../data/ml-1m/userbased.testMF.csv");
     int size = user_based->uhashtable.size();
     for(int i = 0; i < size; ++i){
         if(user_based->uhashtable[i] != NULL){
             outtrain<<i<<",";
             outtrainMF<<i<<",";
             outtest<<i<<",";
+            outtestMF<<i<<",";
             sort(user_based->uhashtable[i]->begin(),user_based->uhashtable[i]->end());
             int sizej = (user_based->uhashtable[i])->size();
             int j = 0;
-            for(; j < sizej-10; ++j){
+            for(; j < sizej-11; ++j){
                 outtrain<<(*(user_based->uhashtable[i]))[j].movid<<",";
                 outtrainMF<<(*(user_based->uhashtable[i]))[j].movid<<","<<(*(user_based->uhashtable[i]))[j].rating<<",";
                 //output<<(*(user_based->uhashtable[i]))[j].time<<",";
@@ -41,15 +43,18 @@ int main(){
             outtrainMF<<(*(user_based->uhashtable[i]))[j].movid<<","<<(*(user_based->uhashtable[i]))[j].rating<<endl;
             j++;
             //output<<(*(user_based->uhashtable[i]))[j].time;
-            for(; j < sizej; ++j){
+            for(; j < sizej-1; ++j){
                 outtest<<(*(user_based->uhashtable[i]))[j].movid<<",";
+                outtestMF<<(*(user_based->uhashtable[i]))[j].movid<<","<<(*(user_based->uhashtable[i]))[j].rating<<",";
             }
             outtest<<(*(user_based->uhashtable[i]))[j].movid<<endl;
+            outtestMF<<(*(user_based->uhashtable[i]))[j].movid<<","<<(*(user_based->uhashtable[i]))[j].rating<<endl;
         }
     }
     outtrain.close();
     outtrainMF.close();
     outtest.close();
+    outtestMF.close();
     delete user_based;
     return 0;
 }
