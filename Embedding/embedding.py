@@ -3,10 +3,11 @@
 
 import csv
 import tensorflow as tf
+import cPickle as pickle
 
 def getSkipGramData():
     #文件每一行是基于用户的数据，首项为用户编号
-    fp = open("../data/ml-1m/userbased.test.csv","r")
+    fp = open("../data/ml-1m/userbased.train.csv","r")
     reader = csv.reader(fp)
     #用于skip-gram模型训练的数据为二维，第二维是一个[target,content]的pair，
     #因为skip-gram是用target预测content
@@ -29,7 +30,7 @@ def getSkipGramData():
 
 def getCBOWData():
     #文件每一行是基于用户的数据，首项为用户编号
-    fp = open("../data/ml-1m/userbased.test.csv","r")
+    fp = open("../data/ml-1m/userbased.train.csv","r")
     reader = csv.reader(fp)
     data = list()
     maxitem = 0
@@ -47,7 +48,7 @@ class EmbeddingModel(object):
             tf.random_uniform([item_vocabulary_size,embedding_size],-1.0,1.0)
             )
 
-        embed = tf.nn.embedding_lookup(embeddings,train_inputs)
+        embed = tf.nn.embedding_lookup(self.embeddings,self.train_inputs)
 
         nce_weights = tf.Variable(
             tf.random_uniform([item_vocabulary_size,embedding_size],-1.0,1.0)
@@ -55,10 +56,10 @@ class EmbeddingModel(object):
 
         nce_biases = tf.Variable(tf.zeros([item_vocabulary_size]))
 
-        self.loss = tf.reduce_mean(tf.nn.nce_loss(nce_weights,nce_biases,train_labels,embed,num_sampled,item_vocabulary_size))
+        self.loss = tf.reduce_mean(tf.nn.nce_loss(nce_weights,nce_biases,self.train_labels,embed,num_sampled,item_vocabulary_size))
 
 
-    def getEmbeddings(self,sess,training_epoch,training_data,learning_rate):
+    def getEmbeddings(self,sess,training_epoch,inputs,labels,learning_rate):
         #初始化所有变量 
 
         train_op = tf.train.AdamOptimizer(learning_rate).minimize(self.loss)
@@ -66,7 +67,7 @@ class EmbeddingModel(object):
         
         for i in range(training_epoch):
 
-            _,loss_val = sess.run([train_op,self.loss],feed_dict={self.train_inputs:,self.train_labels:})
+            _,loss_val = sess.run([train_op,self.loss],feed_dict={self.train_inputs:inputs,self.train_labels:labels})
 
             print "the %d epoch loss is %f"%(i,loss_val)
 
@@ -78,12 +79,13 @@ def main():
     batch_size = len(train_data)
     embedding_size = 10
     num_sampled = 100
-
+    print "set parameters"
     emb = EmbeddingModel(batch_size,item_vocabulary_size,embedding_size,num_sampled)
 
     train_epoch = 200
-    learning_rate = 0.01
+    learning_rate = 0.05
 
+    print "has build the model"
     with tf.Session() as sess:
         embeddings = emb.getEmbeddings(sess,train_epoch,train_data,learning_rate) 
 
