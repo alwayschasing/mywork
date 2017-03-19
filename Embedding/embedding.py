@@ -56,7 +56,7 @@ class EmbeddingModel(object):
 
         nce_biases = tf.Variable(tf.zeros([item_vocabulary_size]))
 
-        self.loss = tf.reduce_mean(tf.nn.nce_loss(nce_weights,nce_biases,self.train_labels,embed,num_sampled,item_vocabulary_size))
+        self.loss = tf.reduce_mean(tf.nn.nce_loss(nce_weights,nce_biases,embed,self.train_labels,num_sampled,item_vocabulary_size))
 
 
     def getEmbeddings(self,sess,training_epoch,inputs,labels,learning_rate):
