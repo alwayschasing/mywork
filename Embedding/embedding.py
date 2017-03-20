@@ -11,6 +11,7 @@ def getSkipGramData():
     reader = csv.reader(fp)
     #用于skip-gram模型训练的数据为二维，第二维是一个[target,content]的pair，
     #因为skip-gram是用target预测content
+
     data = list() 
 
     maxitem = 0
@@ -26,6 +27,11 @@ def getSkipGramData():
     fp.close()
     print "get the skip-gram data"
     #返回物品最大索引，即物品集的大小与训练数据
+    print maxitem
+    print data[0]
+    savefp = open("../data/ml-1m/embedding/data","wb")
+    pickle.dump((maxitem,data),savefp)
+    savefp.close()
     return maxitem,data 
 
 def getCBOWData():
@@ -75,7 +81,8 @@ class EmbeddingModel(object):
 
 def main():
     #预备训练数据，设置训练参数
-    item_vocabulary_size,train_data = getSkipGramData()
+    # item_vocabulary_size,train_data = getSkipGramData()
+    print item_vocabulary_size
     batch_size = len(train_data)
     embedding_size = 10
     num_sampled = 100
@@ -94,7 +101,8 @@ def main():
     savefp.close()
 
 if __name__ == "__main__":
-    main()
+    # main()
+    getSkipGramData()
         
     
 
