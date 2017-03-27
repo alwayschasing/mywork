@@ -4,9 +4,11 @@
 import csv
 import tensorflow as tf
 import cPickle as pickle
+import time
 
 def getSkipGramData():
     #文件每一行是基于用户的数据，首项为用户编号
+    start = time.time()
     fp = open("../data/ml-1m/userbased.train.csv","r")
     reader = csv.reader(fp)
     #用于skip-gram模型训练的数据为二维，第二维是一个[target,content]的pair，
@@ -17,7 +19,7 @@ def getSkipGramData():
     maxitem = 0
     for line in reader:
         for i in line[1:]:
-            if maxitem > i:
+            if maxitem < i:
                 maxitem = i
             for j in line[1:]:
                 if i == j:
@@ -29,10 +31,15 @@ def getSkipGramData():
     #返回物品最大索引，即物品集的大小与训练数据
     print maxitem
     print data[0]
-    savefp = open("../data/ml-1m/embedding/data","wb")
-    pickle.dump((maxitem,data),savefp)
+    savefp = open("../data/ml-1m/embedding/data.csv","w")
+    writer = csv.writer(savefp) 
+    writer.writerow([maxitem])
+    for line in data:
+        writer.writerow(line)
     savefp.close()
-    return maxitem,data 
+    end = time.time()
+    print "get data has run %d miniutes"%((end-start)/60)
+    #return maxitem,data 
 
 def getCBOWData():
     #文件每一行是基于用户的数据，首项为用户编号
@@ -82,6 +89,12 @@ class EmbeddingModel(object):
 def main():
     #预备训练数据，设置训练参数
     # item_vocabulary_size,train_data = getSkipGramData()
+    item_vocabulary_size = 3953
+    train_data = []
+    with open("../data/ml-1m/embedding/data.csv","r") as fp:
+        reader = csv.reader(fp)
+        lines = list(reader)
+        train_data = lines[1:]
     print item_vocabulary_size
     batch_size = len(train_data)
     embedding_size = 10
@@ -101,8 +114,8 @@ def main():
     savefp.close()
 
 if __name__ == "__main__":
-    # main()
-    getSkipGramData()
+    main()
+    #getSkipGramData()
         
     
 
