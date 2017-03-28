@@ -60,10 +60,21 @@ class Autoencoder(object):
             current_input = output
 
         #now have the reconstruction through the network
-        self.y = current_input
+        Wo = tf.Variable(tf.random_uniform(
+            [dimensions[0],dimensions[0]],
+            -1.0/math.sqrt(dimensions[0]),
+            1.0/math.sqrt(dimensions[0])
+            ))
+        self.logits = tf.matmul(current_input,Wo)+b
+
+        self.y = tf.nn.sigmoid(self.logits)
 
         #cost function measures pixel-wise difference
-        self.cost = tf.reduce_sum(tf.square(self.y-self.x))
+        #self.cost = tf.reduce_sum(tf.square(self.y-self.x))
+        self.cost = tf.contrib.losses.sigmoid_cross_entropy(
+            multi_class_labels = self.x,
+            logits = self.logits
+            )
         
     #训练函数，参数有session,训练数据集
     #调用时需要给出optimizer
@@ -94,8 +105,8 @@ class Autoencoder(object):
             sess.run(optimizer,feed_dict={self.x:last})
             cost = sess.run(self.cost,feed_dict={self.x:last})
             print "the %d epoch cost is %f"%(epoch,cost)
-            if math.fabs(last_cost-cost)<10:
-                break
+            #if math.fabs(last_cost-cost)<10:
+                #break
 
     #对要编码的数据集进行编码
     def transform(self,sess,x_input):

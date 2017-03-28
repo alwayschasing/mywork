@@ -8,61 +8,37 @@ import tensorflow as tf
 
 fp = open("../data/ml-1m/itembased.train.csv","r")
 lines = fp.readlines()
-itemsize = len(lines)
+itemsize = 3952
+print itemsize
 
-#build the map item to index
-item_index = dict()
-#build the map index to item
-index2item = dict()
-
-user_index = dict()
-n_u = 0
-for line in lines:
-    line = line.strip().split(',')
-    l = len(line)
-    for i in range(1,l):
-        if user_index.has_key(line[i]):
-            continue
-        else: user_index[line[i]] = n_u 
-        n_u += 1
 
 #在数据集中出现的用户数量
-n_user = len(user_index)
+n_user = 6040
 
 #训练数据集
-X = np.zeros((itemsize,n_user),dtype = int)
-for i in range(itemsize):
-    line = lines[i].strip().split(',')
-    item_index[line[0]] = i
-    index2item[i] = line[0]
-    l = len(line)
-    for j in range(1,l):
-        X[i][user_index[line[j]]] = 1
+X = np.zeros((itemsize+1,n_user+1),dtype = np.float32)
+for line in lines:
+    line = line.strip().split(',')
+    for u in line[1:]:
+        X[int(line[0])][int(u)] = 1
 
-dimensions = [6040,20]
+dimensions = [n_user+1,6040,600,10]
 encoder = Autoencoder(dimensions)
 
 #定义自动编码机的优化方法
-learning_rate = 0.005
+learning_rate = 0.01
 optimizer = tf.train.GradientDescentOptimizer(learning_rate)
 #optimizer = tf.train.AdamOptimizer(learning_rate)
 
 #建立session训练自动编码机，并使用
-train_epoch = 1000 
+train_epoch = 20 
 sess = tf.Session()
 batch_size = len(X)
 encoder.fit(sess,X,optimizer,n_epoch=train_epoch,batch_size=batch_size)
 encoder_res = encoder.transform(sess,X)
-
-
-sp1 = open("../data/ml-1m/autoencoder/item_hidden_vector","wb")
-sp2 = open("../data/ml-1m/autoencoder/item_index","wb")
-sp3 = open("../data/ml-1m/autoencoder/index2item","wb")
-pickle.dump(encoder_res,sp1)
-pickle.dump(item_index,sp2)
-pickle.dump(index2item,sp3)
-sp1.close()
-sp2.close()
-sp3.close()
-
+print type(encoder_res)
+print encoder_res.shape
+resfp = open("../data/ml-1m/autoencoder/encoderdata","wb")
+pickle.dump(encoder_res,resfp)
+resfp.close()
 

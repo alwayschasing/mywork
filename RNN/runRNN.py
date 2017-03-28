@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
+import cPickle as pickle
 import csv
 import tensorflow as tf
 import numpy as np
@@ -13,7 +14,7 @@ def getMFData():
     fpin = open("/home/lrh/graduation_project/MF/MFModel","r")
     lines = fpin.readlines()
     num = len(lines)
-    #
+    
     max_n_item = 0
     for i in range(5,num):
         line = lines[i].split()
@@ -35,9 +36,15 @@ def getMFData():
                 vec = line[2:]
                 item_latent_vec[index] = vec
     print "has got MFdata"
+
     fpin.close()
     return item_latent_vec
 
+def getAutoencoders():
+    fp = open("../data/ml-1m/autoencoder/encoderdata","rb")
+    item_set = pickle.load(fp)
+    fp.close()
+    return item_set
 def getTrainData():
     """
     返回的数据：涉及同一用户的序列数据组成一个列表，即为一个batch
@@ -73,12 +80,15 @@ def getTestData():
     fp.close()
     return te_input,te_target
 
-def knn(item,item_set,k):
+def knn(index,item,item_set,k,history):
     """
     item为一个向量，item_set为向量列表，
     k近邻返回的是item_set的向量索引，也就是
     item的实际编号
     """    
+    """
+    但除去每个用户已经消费过的记录
+    """
     itemNum = len(item_set)
     dists = np.zeros([itemNum]) #记录和每一个item的距离
     for i,v in enumerate(item_set):
@@ -86,8 +96,21 @@ def knn(item,item_set,k):
 
     #根据距离数组中的值排序数组索引,找出k近邻
     sortedDistIndices = dists.argsort() 
-
-    return sortedDistIndices[:k]
+    k_list = []
+    count = 0
+    #除去已经有记录的电影
+    for i in sortedDistIndices:
+        if i in history:
+            continue
+        else:
+            k_list.append(i)
+            count += 1
+            if count >= k:
+                break
+    #print "count:%d"%count
+    #print k_list
+    return k_list
+    #return sortedDistIndices[0:k]
 
 
 def evaluate(pred_res,target,item_latent_vec):
@@ -98,19 +121,35 @@ def evaluate(pred_res,target,item_latent_vec):
     以k近邻来选择推荐
     n_user为用户数量
     """
+    fp = open("../data/ml-1m/userbased.train.csv","r")
+    userhistory = list(csv.reader(fp))
     recall = 0.0
     n_user = len(pred_res)
     #预测目标的个数
     n_target= len(target[0])
+    savefp = open("../data/ml-1m/predicted_res.csv","w")
+    writer = csv.writer(savefp)
+    hituser = 0
     for k,v in enumerate(pred_res):
         #返回的推荐为用户编号
-        recommed = knn(v,item_latent_vec,k)
+        #该用户的历史列表，转换为整数型
+        his = np.asarray(userhistory[k][1:],dtype=np.int32)
+        his = his.tolist()
+        recommed = knn(k,v,item_latent_vec,10,his)
+        writer.writerow(recommed)
         hit = 0
         for i in recommed:
             if i in target[k]:
                 hit += 1
-        recall += hit/n_target
+        if hit != 0:
+            print hit
+            hituser += 1
+        recall += float(hit)/n_target
+    print "hituser:%d"%hituser
+    averec = recall/hituser
+    print "relhit averec:%f"%averec
     recall = recall/n_user 
+    savefp.close()
     return recall
             
 def main():
@@ -118,7 +157,7 @@ def main():
     #这里tr_data按每个用户一个list作为一个训练batch，数据表示为
     #item编号，还没有表示为隐向量
     tr_data = getTrainData()
-    item_latent_vec = getMFData()
+    item_latent_vec = getAutoencoders()
     
     #设置LSTM模型的参数
     #tr_data[0]为一个batch,tr_data[0][0]为第一个batch中第一个序列的长度，包括用户编号
@@ -133,8 +172,8 @@ def main():
     model = LSTM(n_step=n_step,hidden_size=hidden_size,n_user=n_user)
     
     #训练轮数
-    epoch = 10
-    learning_rate = 0.05
+    epoch = 20
+    learning_rate = 0.1
 
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     #在一个session内完成训练与预测
@@ -150,7 +189,8 @@ def main():
         print "recall is %f"%recall
 
 
+
 if __name__ == "__main__":
-    #getmfdata()
+    #getMFData()
     #gettestdata()
     main() 

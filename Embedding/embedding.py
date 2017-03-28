@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 # coding=utf-8
 
+import numpy as np
 import csv
 import tensorflow as tf
 import cPickle as pickle
 import time
 
+
 def getSkipGramData():
+    print "start getSkipGramData"
     #文件每一行是基于用户的数据，首项为用户编号
     start = time.time()
     fp = open("../data/ml-1m/userbased.train.csv","r")
@@ -19,8 +22,8 @@ def getSkipGramData():
     maxitem = 0
     for line in reader:
         for i in line[1:]:
-            if maxitem < i:
-                maxitem = i
+            #if maxitem < i:
+                #maxitem = i
             for j in line[1:]:
                 if i == j:
                     continue
@@ -39,7 +42,7 @@ def getSkipGramData():
     savefp.close()
     end = time.time()
     print "get data has run %d miniutes"%((end-start)/60)
-    #return maxitem,data 
+    return maxitem,data 
 
 def getCBOWData():
     #文件每一行是基于用户的数据，首项为用户编号
@@ -88,13 +91,15 @@ class EmbeddingModel(object):
 
 def main():
     #预备训练数据，设置训练参数
-    # item_vocabulary_size,train_data = getSkipGramData()
+    item_vocabulary_size,train_data = getSkipGramData()
+    train_data = np.asarray(train_data,dtype=np.int32)
     item_vocabulary_size = 3953
-    train_data = []
-    with open("../data/ml-1m/embedding/data.csv","r") as fp:
-        reader = csv.reader(fp)
-        lines = list(reader)
-        train_data = lines[1:]
+    start = time.time()
+    #train_data = []
+    #with open("../data/ml-1m/embedding/data.csv","r") as fp:
+        #reader = csv.reader(fp)
+        #lines = list(reader)
+        #train_data = lines[1:]
     print item_vocabulary_size
     batch_size = len(train_data)
     embedding_size = 10
@@ -102,13 +107,15 @@ def main():
     print "set parameters"
     emb = EmbeddingModel(batch_size,item_vocabulary_size,embedding_size,num_sampled)
 
-    train_epoch = 200
+    train_epoch = 100
     learning_rate = 0.05
 
     print "has build the model"
     with tf.Session() as sess:
-        embeddings = emb.getEmbeddings(sess,train_epoch,train_data,learning_rate) 
+        embeddings = emb.getEmbeddings(sess,train_epoch,train_data[:,0],train_data[:,1],learning_rate) 
 
+    end = time.time() 
+    print "train and predict run %d miniutes"%((end-start)/60)
     savefp = open("../data/ml-1m/embeddings","wb")
     pickle.dump(embeddings,savefp)
     savefp.close()
