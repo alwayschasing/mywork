@@ -5,7 +5,7 @@ import cPickle as pickle
 import csv
 import tensorflow as tf
 import numpy as np
-from rnn import LSTM
+from onehotRNN import NetworkModel 
 
 rootdir = "/home/lrh/graduation_project/"
 neighbor_k = 10
@@ -16,35 +16,43 @@ def getMFData():
     num = len(lines)
     
     max_n_item = 0
+    max_n_user = 0
     for i in range(5,num):
         line = lines[i].split()
         flag = line[0][0]
-        if flag == 'q':
-            index = int(line[0][1:])
-            if index > max_n_item:
-                max_n_item = index
+        if flag == 'p':
+            u_index = int(line[0][1:])
+            if u_index > max_n_user:
+                max_n_user = u_index
+        elif flag == 'q':
+            i_index = int(line[0][1:])
+            if i_index > max_n_item:
+                max_n_item = i_index
+
     latent_dim = 10
     #shape[0]加1是因为实际数据从1而不是从0开始
     item_latent_vec = np.zeros([max_n_item+1,latent_dim],dtype=np.float32)
+    user_latent_vec = np.zeros([max_n_user+1,latent_dim],dtype=np.float32)
     for i in range(5,num):
         line = lines[i].split()
         flag = line[0][0]
-        if flag == 'q':
-            index = int(line[0][1:])
+        if flag == 'p':
+            u_index = int(line[0][1:])
+            sign = line[1]
+            if(sign == 'T'):
+                vec = line[2:]
+                user_latent_vec[u_index] = vec
+        elif flag == 'q':
+            i_index = int(line[0][1:])
             sign = line[1]
             if(sign=='T'):
                 vec = line[2:]
-                item_latent_vec[index] = vec
+                item_latent_vec[i_index] = vec
     print "has got MFdata"
 
     fpin.close()
-    return item_latent_vec
+    return user_latent_vec,item_latent_vec
 
-def getAutoencoders():
-    fp = open("../data/ml-1m/autoencoder/encoderdata","rb")
-    item_set = pickle.load(fp)
-    fp.close()
-    return item_set
 def getTrainData():
     """
     返回的数据：涉及同一用户的序列数据组成一个列表，即为一个batch
@@ -157,19 +165,18 @@ def main():
     #这里tr_data按每个用户一个list作为一个训练batch，数据表示为
     #item编号，还没有表示为隐向量
     tr_data = getTrainData()
-    item_latent_vec = getAutoencoders()
+    user_latent_vec,item_latent_vec = getMFData()
     
     #设置LSTM模型的参数
     #tr_data[0]为一个batch,tr_data[0][0]为第一个batch中第一个序列的长度，包括用户编号
     n_step = len(tr_data[0][0])-2 #最后一个留作训练目标
     
-    #这里循环神经网络隐单元的数量与物品隐向量设置为相同(也可不同)
-    hidden_size = item_latent_vec.shape[1]
-
-    #这里用户数量，为了在模型中基于用户的偏置list的大小
-    n_user = len(tr_data)
-
-    model = LSTM(n_step=n_step,hidden_size=hidden_size,n_user=n_user)
+    #这里循环神经网络隐单元的大小
+    hidden_size = 20
+    latent_vec_size = user_latent_vec.shape[1]
+   
+    #参数有:n_step,hidden_size,item_code_size,u_code_size,latent_vec_size
+    model = NetworkModel(n_step,hidden_size,item_code_size,u_code_size,latent_vec_size)
     
     #训练轮数
     epoch = 20

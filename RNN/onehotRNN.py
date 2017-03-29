@@ -3,13 +3,13 @@
 
 import tensorflow as tf
 
-class LSTM(object):
+class NetworkModel(object):
     """
     这里的模型只是对item的输入用lstm建模，最后将lstm的输出与user的onehot编码变换进行结合
     """
 
     #搭建神经网络结构,部分为lstm
-    def __init__(self,n_step,hidden_size,item_code_size,latent_vec_size,u_code_size):
+    def __init__(self,n_step,hidden_size,item_code_size,u_code_size,latent_vec_size):
         """
         参数
         n_step: rnn循环的步数
