@@ -2,6 +2,7 @@
 # coding=utf-8
 
 import tensorflow as tf
+import numpy as np
 
 class NetworkModel(object):
     """
@@ -134,34 +135,56 @@ class NetworkModel(object):
         ##损失使用交叉熵
         self.cost = tf.nn.softmax_cross_entropy_with_logits(logits=self.Outs,labels=self.y_target,dim=-1,name="loss")
 
-    def train(self,sess,train_data,i_latent_set,u_latent_set,optimizer,epoch):
-        #i_latent_set表示物品隐向量表示集合
-        sess.run(tf.global_variables_initializer())
+    def train(self,sess,optimizer,epoch,train_data,i_latent_set,u_latent_set,max_item_index,max_user_index):
+        """
+        将数据的部分准备也放在了这里，train_data只包含所有用户的编号数据，
+        一个用户的数据为一个batch，每个batch的每一个为一个序列，行首为用户编号
+
+        同时要生成用户以及item的one-hot编码,使用max_item_index,max_user_index
+        """
         optimizer = optimizer.minimize(self.cost)
+        sess.run(tf.global_variables_initializer())
         #batch的数量，这里一个用户的数据为一个batch
+        n_step = len(train_data[0][0])-2
         n_batch = len(train_data)
         for k in range(epoch):
+            """
+            训练epoch轮
+            """
             cost = 0
             for i in range(n_batch):
-                #user = train_data[i][0][0]
+                """
+                按batch轮着训练
+                """
+                user = train_data[i][0][0]
+                u_code = np.zeros([max_user_index+1])
+                u_code[user] = 1 #将user编号作为位置索引
+
                 #生成一个batch的训练数据
                 batch_input = []
                 batch_target = []
                 #每个序列数据为一个line
                 for line in train_data[i]:
-                    tmp_input =[]
-                    tmp_target = []
+                    #对序列数据one-hot编码
+                    input_code = np.zeros([n_step,max_item_index+1])
+                    target_code = np.zeros([n_step,max_item_index+1])
+                    
+                    k = 0 #计数step数据处理    
                     for i_index in line[1:-1]:
                         i_index = int(i_index)
-                        tmp_input.append(i_latent_set[i_index])
+                        input_code[k][i_index] = 1
+                        k += 1
+
+                    k = 0
                     for i_index in line[2:]:
                         i_index = int(i_index)
-                        tmp_target.append(i_latent_set[i_index])
+                        target_code[k][i_index] = 1
+                        k += 1
 
-                    batch_input.append(tmp_input) 
-                    batch_target.append(tmp_target)
+                    batch_input.append(input_code) 
+                    batch_target.append(target_code)
 
-                #,生成一个batch的数据后训练,数据序列长度为9
+                #生成一个batch的数据后训练,数据序列长度为9
                 sess.run(optimizer,feed_dict={
                     self.x_input:batch_input,
                     self.y_target:batch_target})

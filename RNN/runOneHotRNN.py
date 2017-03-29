@@ -59,6 +59,7 @@ def getTrainData():
     ,不同的batch大小不同，所有列表组成返回数据，例如对于用户1：
     [batch_size]
     return [n_user,batch_size(不同用户大小不一样),vec_size]
+    每个batch的每一行的行首为用户编号
     """
     fpin = open("/home/lrh/graduation_project/data/ml-1m/rnndata.csv","r")
     lines = list(csv.reader(fpin))
@@ -76,6 +77,7 @@ def getTrainData():
             tmp = [lines[i]] 
     training_data.append(tmp)
     fpin.close()
+    #training_data:[n_user,var_batch_size,n_step]
     return training_data
 
 def getTestData():
@@ -169,12 +171,18 @@ def main():
     
     #设置LSTM模型的参数
     #tr_data[0]为一个batch,tr_data[0][0]为第一个batch中第一个序列的长度，包括用户编号
+    #training_data:[n_user,var_batch_size,n_step]
     n_step = len(tr_data[0][0])-2 #最后一个留作训练目标
     
     #这里循环神经网络隐单元的大小
     hidden_size = 20
     latent_vec_size = user_latent_vec.shape[1]
-   
+    max_item_index = 3952    
+    max_user_index = 6040
+
+    item_code_size = max_item_index+1
+    u_code_size = max_user_index+1
+
     #参数有:n_step,hidden_size,item_code_size,u_code_size,latent_vec_size
     model = NetworkModel(n_step,hidden_size,item_code_size,u_code_size,latent_vec_size)
     
@@ -185,7 +193,8 @@ def main():
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     #在一个session内完成训练与预测
     with tf.Session() as sess:
-        model.train(sess,tr_data,item_latent_vec,optimizer,epoch)
+
+        model.train(sess,optimizer,epoch,tr_data,item_latent_vec,user_latent_vec,max_item_index,max_user_index)
         ##预测结果以字典保存，关键字为用户编号
         
         te_input,te_target = getTestData()
