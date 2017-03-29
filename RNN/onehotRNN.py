@@ -2,7 +2,6 @@
 # coding=utf-8
 
 import tensorflow as tf
-import math
 
 class LSTM(object):
     """
@@ -10,25 +9,36 @@ class LSTM(object):
     """
 
     #搭建神经网络结构,部分为lstm
-    def __init__(self,n_step,hidden_size,n_user):
+    def __init__(self,n_step,hidden_size,item_code_size,latent_vec_size,u_code_size):
+        """
+        参数
+        n_step: rnn循环的步数
+        hidden_size: rnn部分隐藏单元大小
+        item_code_size: item编码向量的大小
+        latent_vec_size: 使用的电影或者用户隐因子向量
+        
+        u_code_size: 用户编码向量的大小
+        """
         
         self.n_step = n_step
         self.hidden_size = hidden_size
         #这里的输入为电影onehot编码,电影隐向量
-        self.item = tf.placeholder(tf.float32,[None,n_step,item_size],name="item")
-        self.i_latent_vec = tf.placeholder(tf.float32,[None,n_step,i_vec_size],name="i_latent_vec")
+        self.item = tf.placeholder(tf.float32,[None,n_step,item_code_size],name="item")
+        self.i_latent_vec = tf.placeholder(tf.float32,[None,n_step,latent_vec_size],name="i_latent_vec")
 
-        #变换数据为可矩阵相乘,变换后item形式为：[n_step*batch_size,item_size]
-        var_item = tf.transpose(self.item,[1,0,2])
-        var_item = tf.reshape(var_item,[-1,item_size])
+        batch_size = tf.shape(self.item)[0]
+
+        #变换数据为可矩阵相乘,变换后item形式为：[n_step*batch_size,item_code_size]
+        _item = tf.transpose(self.item,[1,0,2])
+        _item = tf.reshape(_item,[-1,item_code_size])
 
         #同样的变换应用与i_latent_vec
-        var_i_vec = tf.transpose(self.i_latent_vec,[1,0,2])
-        var_i_vec = tf.reshape(var_i_vec,[-1,i_vec_size])
+        _i_latent_vec = tf.transpose(self.i_latent_vec,[1,0,2])
+        _i_latent_vec = tf.reshape(_i_latent_vec,[-1,latent_vec_size])
 
-        #定义变换矩阵V[item_size,hidden_size]，W[i_latent_vec_size,hidden_size]
+        #定义变换矩阵V[item_code_size,hidden_size]，W[latent_vec_size,hidden_size]
         V = tf.Variable(tf.random_uniform(
-            [item_size,hidden_size],
+            [item_code_size,hidden_size],
             -1.0/hidden_size,
             1.0/hidden_size,
             dtype=tf.float32,
@@ -36,7 +46,7 @@ class LSTM(object):
             ))
 
         W = tf.Variable(tf.random_uniform(
-            [i_latent_vec_size,hidden_size],
+            [latent_vec_size,hidden_size],
             -1.0/hidden_size,
             1.0/hidden_size,
             dtype=tf.float32,
@@ -44,7 +54,7 @@ class LSTM(object):
             ))
 
         #产生lstm的输入[n_step*batch_size,hidden_size]
-        inputs = tf.add(tf.matmul(self.item,V),tf.matmul(self.i_latent_vec))
+        inputs = tf.add(tf.matmul(_item,V),tf.matmul(_i_latent_vec,W))
         inputs = tf.split(0,n_step,inputs) #分step批同时处理
 
         #batch_size = tf.shape(self.x_input)[0]
@@ -64,53 +74,67 @@ class LSTM(object):
 
         #与lstm输出相乘的权值Y
         Y = tf.Variable(tf.random_uniform(
-            [hidden_size,item_size]
+            [hidden_size,item_code_size]
             -1.0/hidden_size,
             1.0/hidden_size,
             dtype=tf.float32,
             name="Y"
             ))
+        #shape:[n_step*batch_size,item_code_size]
+        rnn_outs = tf.matmul(inner_outputs,Y)
+        
 
         """
         定义用户部分的模型
         """
+        #需要输入的数据
         self.user = tf.placeholder(tf.float32,[None,u_code_size],name="usercode")
         
-        self.ulaten_vec = tf.placeholder(tf.float32,[None,vec_size],name="user_latent_vec")
+        self.ulaten_vec = tf.placeholder(tf.float32,[None,latent_vec_size],name="user_latent_vec")
+
 
         #定义用户模型部分参数P,Q
-        
+        #用户模型部分隐单元大小默认与rnn部分相同
+        u_model_hidden_size = hidden_size 
+
         P = tf.Variable(tf.random_uniform(
-            
+            [u_code_size,u_model_hidden_size]   
             ))
 
         Q = tf.Variable(tf.random_uniform(
-
+            [latent_vec_size,u_model_hidden_size]
             ))
 
-        #用户模型部分的输出为user*P+ulaten_vec*Q
-        u_model_out = tf.add(tf.matmul(self.user,P),tf.matmul(self.ulaten_vec,Q))
+        #用户模型部分的输出为user*P+ulaten_vec*Q,shape:[batch_size,u_model_hidden_size]
+        u_inner_outs = tf.add(tf.matmul(self.user,P),tf.matmul(self.ulaten_vec,Q))
+        #加一个激活函数,并将输出复制n_step份
+        u_inner_outs = tf.sigmoid(u_inner_outs)
+        
 
         #与用户模型输出相乘的矩阵Z
         Z = tf.Variable(tf.random_uniform(
-
+            [u_model_hidden_size,item_code_size]
             ))
+        #用户模型的最终输出，变换到[n_step*batch_size,item_code_size]
+        u_model_outs = tf.matmul(u_inner_outs,Z)
 
-        #得到最终输出O
-        self.Out = 
-
+        #得到最终输出O,使用softmax多分类
+        tmp_outs = tf.reshape(rnn_outs,[n_step,batch_size,item_code_size])
+        for i in range(n_step):
+            tmp_outs[i] = tf.add(tmp_outs[i],u_model_outs)
+        #恢复与输入，目标向量相同的形式
+        logits = tf.transpose(tmp_outs,[1,0,2])#shape:[batch_size,n_step,item_code_size]
+        #softmax:dim指做softmax计算的维度，默认为-1，即最后一个维度
+        self.Outs = tf.softmax(logits,dim=-1,name="softmax_outs")
 
         #目标向量
         self.y_target = tf.placeholder(tf.float32,[None,n_step,hidden_size],name="y_target")
 
-        #恢复与输入相同的形式
-        self.outputs = tf.reshape(inner_outputs,[batch_size,n_step,hidden_size])
         
-        ##使用均方误差
-        #self.cost = tf.reduce_mean(tf.pow(tf.subtract(self.outputs,self.y_target),2))
-        self.cost = tf.nn.l2_loss(tf.subtract(self.outputs,self.y_target))
+        ##损失使用交叉熵
+        self.cost = tf.nn.softmax_cross_entropy_with_logits(logits=self.Outs,labels=self.y_target,dim=-1,name="loss")
 
-    def train(self,sess,train_data,i_latent_set,optimizer,epoch):
+    def train(self,sess,train_data,i_latent_set,u_latent_set,optimizer,epoch):
         #i_latent_set表示物品隐向量表示集合
         sess.run(tf.global_variables_initializer())
         optimizer = optimizer.minimize(self.cost)
@@ -170,5 +194,5 @@ class LSTM(object):
 
 if __name__ == "__main__":
 
-    model = LSTM(n_step=9,hidden_size=10,n_user=6040)
+    model = LSTM(n_step=9,hidden_size=10)
     #test
