@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import cPickle as pickle
 import csv
 import tensorflow as tf
 import numpy as np
@@ -77,6 +76,7 @@ def getTrainData():
             tmp = [lines[i]] 
     training_data.append(tmp)
     fpin.close()
+    training_data = np.asarray(training_data,np.int32)
     #training_data:[n_user,var_batch_size,n_step]
     return training_data
 
@@ -88,51 +88,21 @@ def getTestData():
     te_input = te_data[:,0:10]
     te_target = te_data[:,10:]
     fp.close()
+    te_input = np.asarray(te_input,np.int32)
+    te_target = np.asarray(te_target,np.int32)
     return te_input,te_target
 
-def knn(index,item,item_set,k,history):
-    """
-    item为一个向量，item_set为向量列表，
-    k近邻返回的是item_set的向量索引，也就是
-    item的实际编号
-    """    
-    """
-    但除去每个用户已经消费过的记录
-    """
-    itemNum = len(item_set)
-    dists = np.zeros([itemNum]) #记录和每一个item的距离
-    for i,v in enumerate(item_set):
-        dists[i] = ((item-v)**2).sum()
 
-    #根据距离数组中的值排序数组索引,找出k近邻
-    sortedDistIndices = dists.argsort() 
-    k_list = []
-    count = 0
-    #除去已经有记录的电影
-    for i in sortedDistIndices:
-        if i in history:
-            continue
-        else:
-            k_list.append(i)
-            count += 1
-            if count >= k:
-                break
-    #print "count:%d"%count
-    #print k_list
-    return k_list
-    #return sortedDistIndices[0:k]
+def evaluate(pred_res,target,recommend_len):
 
+    """
+    #预测返回的是一个列表，每一项为一个用户的预测，预测结果为一个大小为max_item_index+1的向量 
+    #向量每一项对应一部电影的概率值
+    """   
 
-def evaluate(pred_res,target,item_latent_vec):
-    """
-    预测结果是隐向量形式，target是编号形式
-    预测结果以矩阵形式保存，每行对应一个用户，顺序
-    与目标文件一致
-    以k近邻来选择推荐
-    n_user为用户数量
-    """
     fp = open("../data/ml-1m/userbased.train.csv","r")
     userhistory = list(csv.reader(fp))
+    userhistory = np.asarray(userhistory,np.int32)
     recall = 0.0
     n_user = len(pred_res)
     #预测目标的个数
@@ -143,18 +113,30 @@ def evaluate(pred_res,target,item_latent_vec):
     for k,v in enumerate(pred_res):
         #返回的推荐为用户编号
         #该用户的历史列表，转换为整数型
-        his = np.asarray(userhistory[k][1:],dtype=np.int32)
-        his = his.tolist()
-        recommed = knn(k,v,item_latent_vec,10,his)
-        writer.writerow(recommed)
+        history = userhistory[k][1:]
+        history = history.tolist()
+        recommend = v.argsort() 
+        #过滤掉已经看过的电影
+        rec_list = []
+        count = 0
+        for index in recommend:
+            if index not in history:
+                count += 1
+                rec_list.append(index)
+                if count >= recommend_len:
+                    break
+        
+        #统计每个用户的命中数
+        writer.writerow(rec_list)
         hit = 0
-        for i in recommed:
+        for i in rec_list:
             if i in target[k]:
                 hit += 1
         if hit != 0:
             print hit
             hituser += 1
         recall += float(hit)/n_target
+
     print "hituser:%d"%hituser
     averec = recall/hituser
     print "relhit averec:%f"%averec
@@ -198,10 +180,15 @@ def main():
         ##预测结果以字典保存，关键字为用户编号
         
         te_input,te_target = getTestData()
-        
-        pred_res = model.pred(sess,te_input,item_latent_vec)
 
-        recall = evaluate(pred_res,te_target,item_latent_vec)
+        """
+        #预测返回的是一个列表，每一项为一个用户的预测，预测结果为一个大小为max_item_index+1的向量 
+        #向量每一项对应一部电影的概率值
+        """   
+        pred_res = model.pred(sess,te_input,item_latent_vec,user_latent_vec,max_item_index,max_user_index)
+
+        recommed_len = len(te_target[0])
+        recall = evaluate(pred_res,te_target,recommed_len)
         print "recall is %f"%recall
 
 

@@ -52,7 +52,7 @@ def getTrainData():
     [batch_size]
     return [n_user,batch_size(不同用户大小不一样),vec_size]
     """
-    fpin = open("/home/lrh/graduation_project/data/ml-1m/rnndata.csv","r")
+    fpin = open("/home/lrh/graduation_project/data/ml-1m/rnndata2.csv","r")
     lines = list(csv.reader(fpin))
     training_data = []
     n = len(lines)
@@ -108,7 +108,6 @@ def knn(index,item,item_set,k,history):
             if count >= k:
                 break
     #print "count:%d"%count
-    #print k_list
     return k_list
     #return sortedDistIndices[0:k]
 
@@ -133,7 +132,7 @@ def evaluate(pred_res,target,item_latent_vec):
     for k,v in enumerate(pred_res):
         #返回的推荐为用户编号
         #该用户的历史列表，转换为整数型
-        his = np.asarray(userhistory[k][1:],dtype=np.int32)
+        his = np.asarray(userhistory[k][1:],np.int32)
         his = his.tolist()
         recommed = knn(k,v,item_latent_vec,10,his)
         writer.writerow(recommed)
@@ -142,7 +141,6 @@ def evaluate(pred_res,target,item_latent_vec):
             if i in target[k]:
                 hit += 1
         if hit != 0:
-            print hit
             hituser += 1
         recall += float(hit)/n_target
     print "hituser:%d"%hituser
@@ -157,7 +155,7 @@ def main():
     #这里tr_data按每个用户一个list作为一个训练batch，数据表示为
     #item编号，还没有表示为隐向量
     tr_data = getTrainData()
-    item_latent_vec = getAutoencoders()
+    item_latent_vec = getMFData()
     
     #设置LSTM模型的参数
     #tr_data[0]为一个batch,tr_data[0][0]为第一个batch中第一个序列的长度，包括用户编号
@@ -172,7 +170,7 @@ def main():
     model = LSTM(n_step=n_step,hidden_size=hidden_size,n_user=n_user)
     
     #训练轮数
-    epoch = 20
+    epoch = 15
     learning_rate = 0.1
 
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
@@ -193,4 +191,5 @@ def main():
 if __name__ == "__main__":
     #getMFData()
     #gettestdata()
+    #getTrainData()
     main() 
