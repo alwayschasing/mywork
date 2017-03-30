@@ -75,7 +75,7 @@ class NetworkModel(object):
 
         #与lstm输出相乘的权值Y
         Y = tf.Variable(tf.random_uniform(
-            [hidden_size,item_code_size]
+            [hidden_size,item_code_size],
             -1.0/hidden_size,
             1.0/hidden_size,
             dtype=tf.float32,
@@ -89,11 +89,14 @@ class NetworkModel(object):
         定义用户部分的模型
         """
         #需要输入的数据
-        self.user = tf.placeholder(tf.float32,[None,u_code_size],name="usercode")
+        self.user = tf.placeholder(tf.float32,[None,self.n_step,u_code_size],name="usercode")
         
-        self.u_latent_vec = tf.placeholder(tf.float32,[None,latent_vec_size],name="user_latent_vec")
+        self.u_latent_vec = tf.placeholder(tf.float32,[None,self.n_step,latent_vec_size],name="user_latent_vec")
 
-
+        _user = tf.transpose(self.user,[1,0,2])
+        _user = tf.reshape(_user,[-1,u_code_size])
+        _u_latent_vec = tf.transpose(self.u_latent_vec,[1,0,2])
+        _u_latent_vec = tf.reshape(_u_latent_vec,[-1,latent_vec_size])
         #定义用户模型部分参数P,Q
         #用户模型部分隐单元大小默认与rnn部分相同
         u_model_hidden_size = hidden_size 
@@ -106,8 +109,8 @@ class NetworkModel(object):
             [latent_vec_size,u_model_hidden_size]
             ))
 
-        #用户模型部分的输出为user*P+ulaten_vec*Q,shape:[batch_size,u_model_hidden_size]
-        u_inner_outs = tf.add(tf.matmul(self.user,P),tf.matmul(self.u_latent_vec,Q))
+        #用户模型部分的输出为user*P+ulaten_vec*Q,shape:[batch_size,n_step,u_model_hidden_size]
+        u_inner_outs = tf.add(tf.matmul(_user,P),tf.matmul(_u_latent_vec,Q))
         #加一个激活函数,并将输出复制n_step份
         u_inner_outs = tf.sigmoid(u_inner_outs)
         
@@ -118,15 +121,16 @@ class NetworkModel(object):
             ))
         #用户模型的最终输出，变换到[n_step*batch_size,item_code_size]
         u_model_outs = tf.matmul(u_inner_outs,Z)
+        u_model_outs = tf.reshape(u_model_outs,[n_step,batch_size,item_code_size])
 
         #得到最终输出O,使用softmax多分类
-        tmp_outs = tf.reshape(rnn_outs,[n_step,batch_size,item_code_size])
-        for i in range(n_step):
-            tmp_outs[i] = tf.add(tmp_outs[i],u_model_outs)
+        rnn_outs = tf.reshape(rnn_outs,[n_step,batch_size,item_code_size])
+
+        logits = tf.add(u_model_outs,rnn_outs)
         #恢复与输入，目标向量相同的形式
-        logits = tf.transpose(tmp_outs,[1,0,2])#shape:[batch_size,n_step,item_code_size]
+        logits = tf.transpose(logits,[1,0,2])#shape:[batch_size,n_step,item_code_size]
         #softmax:dim指做softmax计算的维度，默认为-1，即最后一个维度
-        self.Outs = tf.softmax(logits,dim=-1,name="softmax_outs")
+        self.Outs = tf.nn.softmax(logits,dim=-1,name="softmax_outs")
 
         #目标向量
         self.y_target = tf.placeholder(tf.float32,[None,n_step,hidden_size],name="y_target")
@@ -141,6 +145,7 @@ class NetworkModel(object):
         一个用户的数据为一个batch，每个batch的每一个为一个序列，行首为用户编号
 
         同时要生成用户以及item的one-hot编码,使用max_item_index,max_user_index
+        用户数据需要n_step份以喂给神经网络
         """
         optimizer = optimizer.minimize(self.cost)
         sess.run(tf.global_variables_initializer())
@@ -154,12 +159,14 @@ class NetworkModel(object):
             for i in range(n_batch):
                 """
                 按batch轮着训练
+                一个用户的数据为一个batch
                 """
                 batch_size = len(train_data[i])
-                user = train_data[i][0][0]
-                batch_u_code = np.zeros([batch_size,max_user_index+1])
-                batch_u_code[:,user] = 1 #将user编号作为位置索引
-                batch_user_vec = [u_latent_set[user] for i in range(batch_size)]
+                user = int(train_data[i][0][0])
+                batch_u_code = np.zeros([batch_size,self.n_step,max_user_index+1])
+                batch_u_code[:,:,user] = 1 #将user编号作为位置索引
+                #生成shape:[batch_size,n_step,latent_vec_size]
+                batch_user_vec = [[u_latent_set[user] for i in range(self.n_step)] for j in range(batch_size)]
 
                 #生成一个batch的训练数据
                 batch_input = []
@@ -236,5 +243,5 @@ class NetworkModel(object):
 
 if __name__ == "__main__":
 
-    model = NetworkModel(n_step=9,hidden_size=10)
+    model = NetworkModel(n_step=9,hidden_size=10,item_code_size=3953,u_code_size=6041,latent_vec_size=10)
     #test

@@ -88,8 +88,6 @@ def getTestData():
     te_input = te_data[:,0:10]
     te_target = te_data[:,10:]
     fp.close()
-    te_input = np.asarray(te_input,np.int32)
-    te_target = np.asarray(te_target,np.int32)
     return te_input,te_target
 
 
@@ -102,7 +100,6 @@ def evaluate(pred_res,target,recommend_len):
 
     fp = open("../data/ml-1m/userbased.train.csv","r")
     userhistory = list(csv.reader(fp))
-    userhistory = np.asarray(userhistory,np.int32)
     recall = 0.0
     n_user = len(pred_res)
     #预测目标的个数
@@ -113,16 +110,15 @@ def evaluate(pred_res,target,recommend_len):
     for k,v in enumerate(pred_res):
         #返回的推荐为用户编号
         #该用户的历史列表，转换为整数型
-        history = userhistory[k][1:]
-        history = history.tolist()
+        history = np.asarray(userhistory[k][1:],np.int32)
         recommend = v.argsort() 
         #过滤掉已经看过的电影
         rec_list = []
         count = 0
         for index in recommend:
             if index not in history:
-                count += 1
                 rec_list.append(index)
+                count += 1
                 if count >= recommend_len:
                     break
         
@@ -169,7 +165,7 @@ def main():
     model = NetworkModel(n_step,hidden_size,item_code_size,u_code_size,latent_vec_size)
     
     #训练轮数
-    epoch = 20
+    epoch = 10
     learning_rate = 0.1
 
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
