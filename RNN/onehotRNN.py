@@ -91,7 +91,7 @@ class NetworkModel(object):
         #需要输入的数据
         self.user = tf.placeholder(tf.float32,[None,u_code_size],name="usercode")
         
-        self.ulaten_vec = tf.placeholder(tf.float32,[None,latent_vec_size],name="user_latent_vec")
+        self.u_latent_vec = tf.placeholder(tf.float32,[None,latent_vec_size],name="user_latent_vec")
 
 
         #定义用户模型部分参数P,Q
@@ -107,7 +107,7 @@ class NetworkModel(object):
             ))
 
         #用户模型部分的输出为user*P+ulaten_vec*Q,shape:[batch_size,u_model_hidden_size]
-        u_inner_outs = tf.add(tf.matmul(self.user,P),tf.matmul(self.ulaten_vec,Q))
+        u_inner_outs = tf.add(tf.matmul(self.user,P),tf.matmul(self.u_latent_vec,Q))
         #加一个激活函数,并将输出复制n_step份
         u_inner_outs = tf.sigmoid(u_inner_outs)
         
@@ -145,7 +145,6 @@ class NetworkModel(object):
         optimizer = optimizer.minimize(self.cost)
         sess.run(tf.global_variables_initializer())
         #batch的数量，这里一个用户的数据为一个batch
-        n_step = len(train_data[0][0])-2
         n_batch = len(train_data)
         for k in range(epoch):
             """
@@ -163,24 +162,28 @@ class NetworkModel(object):
                 #生成一个batch的训练数据
                 batch_input = []
                 batch_target = []
+                batch_item_vec = []
+
                 #每个序列数据为一个line
                 for line in train_data[i]:
                     #对序列数据one-hot编码
-                    input_code = np.zeros([n_step,max_item_index+1])
-                    target_code = np.zeros([n_step,max_item_index+1])
-                    
-                    k = 0 #计数step数据处理    
+                    input_code = np.zeros([self.n_step,max_item_index+1])
+                    target_code = np.zeros([self.n_step,max_item_index+1])
+                    tmp_item_vec = [] 
+
+                    count = 0 #计数step数据处理    
                     for i_index in line[1:-1]:
                         i_index = int(i_index)
-                        input_code[k][i_index] = 1
-                        k += 1
+                        input_code[count][i_index] = 1
+                        tmp_item_vec.append(i_latent_set[i_index])
+                        count += 1
 
-                    k = 0
+                    count = 0
                     for i_index in line[2:]:
                         i_index = int(i_index)
-                        target_code[k][i_index] = 1
-                        k += 1
-
+                        target_code[count][i_index] = 1
+                        count += 1
+                    batch_item_vec.append(tmp_item_vec)
                     batch_input.append(input_code) 
                     batch_target.append(target_code)
 
@@ -191,20 +194,25 @@ class NetworkModel(object):
                 #分批累计平均损失,这里train_data[i].shape[0]指一个
                 #用户训练序列的个数
                 cost += sess.run(self.cost,feed_dict={
-                    self.x_input:batch_input,
+                    self.item:batch_input,
+                    self.i_latent_vec:batch_item_vec,
+                    self.user:u_code,
+                    self.u_latent_vec:u_latent_set[user],
                     self.y_target:batch_target})/len(train_data[i])
             print "the %d epoch cost is %f"%(k,cost/n_batch)
 
-    def pred(self,sess,te_data,item_latent_vec):
+    def pred(self,sess,te_data,item_latent_vec,user_latent_vec,max_item_index,max_user_index):
 
         #使用字典保存预测结果，关键字为用户编号
         res = dict()
         input = []
         for line in te_data:
-            #u = line[0]
+            u = line[0]
             te_input = line[1:]
-            tmp = []
+            tmp = np.zeros([self.n_step,max_item_index+1])
+            count = 0
             for i in te_input: 
+                tmp[count][i]
                 tmp.append(item_latent_vec[i])
             input.append(tmp)
             
@@ -217,5 +225,5 @@ class NetworkModel(object):
 
 if __name__ == "__main__":
 
-    model = LSTM(n_step=9,hidden_size=10)
+    model = NetworkModel(n_step=9,hidden_size=10)
     #test

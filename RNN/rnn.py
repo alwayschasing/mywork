@@ -95,7 +95,7 @@ class LSTM(object):
             te_input = line[1:]
             tmp = []
             for i in te_input: 
-                tmp.append(item_latent_vec[i])
+                tmp.append(item_latent_vec[int(i)])
             input.append(tmp)
             
         outputs = sess.run(self.outputs,feed_dict={
