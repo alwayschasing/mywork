@@ -5,8 +5,9 @@ import csv
 import tensorflow as tf
 import numpy as np
 from neuralnet import NeuralNetwork
-rootdir = "/home/lrh/graduation_project/"
-
+"""
+不分用户,使用全部序列数据,以前9个电影预测第10个电影
+"""
 
 def getTrainData():
     """
