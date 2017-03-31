@@ -95,8 +95,6 @@ def main():
     tr_data = getTrainData()
     
     
-    max_item_index = 3952    
-    max_user_index = 6040
 
     seqlen = 9
     onehot_size = 3953
@@ -108,8 +106,17 @@ def main():
     #训练轮数
     epoch = 10
     learning_rate = 0.05
-    train_input = 
-    train_target = 
+    train_input = tr_data[:,:-1]
+    train_target = tr_data[:,-1]
+    batch_size = train_input.shape[0]
+    onehot_input = np.zeros([batch_size,seqlen,onehot_size])
+    onehot_target = np.zeros([batch_size,onehot_size])
+
+    #生成onehot编码的输入与输出
+    for i in range(batch_size):
+        onehot_target[i][train_target[i][0]] = 1
+        for j in range(seqlen):
+            onehot_input[i][train_input[i][j]] = 1
 
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     #在一个session内完成训练与预测
@@ -121,7 +128,7 @@ def main():
         te_input,te_target = getTestData()
 
         """
-        #预测返回的是一个列表，每一项为一个用户的预测，预测结果为一个大小为max_item_index+1的向量 
+        #预测返回的是一个列表，每一项为一个用户的预测，预测结果为一个大小为3953的向量 
         #向量每一项对应一部电影的概率值
         """   
         pred_res = model.pred(sess,te_input)
