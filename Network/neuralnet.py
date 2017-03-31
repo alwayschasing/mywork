@@ -67,7 +67,7 @@ class NeuralNetwork(object):
         sess.run(tf.global_variables_initializer())
         opt = optimizer.minimize(self.loss)
         for epoch in n_epoch:
-            sess.run(opt,feed_dict={self.X_input:,self.Y_tar:})
+            sess.run(opt,feed_dict={self.X_input:train_input,self.Y_tar:train_target})
 
 
     def pred(self,sess,input):
