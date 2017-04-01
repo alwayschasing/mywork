@@ -21,7 +21,7 @@ class NeuralNetwork(object):
 
         batch_size = tf.shape(self.X_input)[0]
         #转换为[batch_size,seqlen*onehot_size]的输入
-        cur_input = tf.reshape(self.X_input,[-1,seqlen*onehot_size],dtype=tf.float32)
+        cur_input = tf.reshape(self.X_input,[-1,seqlen*onehot_size])
 
         weights = []
         bias = []
@@ -73,3 +73,6 @@ class NeuralNetwork(object):
     def pred(self,sess,input):
         pred_res = sess.run(self.softmax_outs,feed_dict={self.X_input:input})
         return pred_res
+
+if __name__ == "__main__":
+    NeuralNetwork(9,3953,[200,300,400])
