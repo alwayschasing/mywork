@@ -106,8 +106,8 @@ def main():
     model = NeuralNetwork(seqlen,onehot_size,hidden_dims)
     
     #训练轮数
-    n_epoch = 5
-    learning_rate = 0.05
+    n_epoch = 15
+    learning_rate = 0.1
     #train_input = tr_data[:,:-1]
     #train_target = tr_data[:,-1]
     #batch_size = train_input.shape[0]
@@ -152,7 +152,8 @@ def main():
                     onehot_input[-i-1][j][tr_data[-i-1][j]] = 1
             _,loss = sess.run([opt,model.loss],feed_dict={model.X_input:onehot_input,model.Y_tar:onehot_target})
             aveloss = loss.mean()
-            print "epoch %d cost is %f"%(epoch,aveloss)
+            sumloss = loss.sum()
+            print "epoch %d cost is %f"%(epoch,sumloss)
 
         endtrain = time.time()
         print "train run %d miniutes"%((endtrain-begintrain)/60)
