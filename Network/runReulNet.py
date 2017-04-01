@@ -5,6 +5,7 @@ import csv
 import tensorflow as tf
 import numpy as np
 from neuralnet import NeuralNetwork
+import time
 """
 不分用户,使用全部序列数据,以前9个电影预测第10个电影
 """
@@ -20,11 +21,12 @@ def getTrainData():
     fpin = open("/home/lrh/graduation_project/data/ml-1m/rnndata2.csv","r")
     lines = list(csv.reader(fpin))
     training_data = []
-    #表示用户编号
+    #首项表示用户编号
     for line in lines:
         training_data.append(line[1:])
     fpin.close()
     training_data = np.asarray(training_data,np.int32)
+    print training_data.shape
     #training_data:[n_user,var_batch_size,n_step]
     return training_data
 
@@ -33,7 +35,7 @@ def getTestData():
     reader = csv.reader(fp)
     te_data = list(reader)
     te_data = np.asarray(te_data,dtype=np.int32)
-    te_input = te_data[:,0:10]
+    te_input = te_data[:,1:10]
     te_target = te_data[:,10:]
     fp.close()
     return te_input,te_target
@@ -77,7 +79,6 @@ def evaluate(pred_res,target,recommend_len):
             if i in target[k]:
                 hit += 1
         if hit != 0:
-            print hit
             hituser += 1
         recall += float(hit)/n_target
 
@@ -99,47 +100,93 @@ def main():
 
     seqlen = 9
     onehot_size = 3953
-    hidden_dims = []
+    hidden_dims = [300,200,100,50]
 
     #参数有:n_step,hidden_size,item_code_size,u_code_size,latent_vec_size
     model = NeuralNetwork(seqlen,onehot_size,hidden_dims)
     
     #训练轮数
-    epoch = 10
+    n_epoch = 5
     learning_rate = 0.05
-    train_input = tr_data[:,:-1]
-    train_target = tr_data[:,-1]
-    batch_size = train_input.shape[0]
-    onehot_input = np.zeros([batch_size,seqlen,onehot_size])
-    onehot_target = np.zeros([batch_size,onehot_size])
+    #train_input = tr_data[:,:-1]
+    #train_target = tr_data[:,-1]
+    #batch_size = train_input.shape[0]
+    batch_size = 10000
+    total_size = tr_data.shape[0]
 
-    #生成onehot编码的输入与输出
-    for i in range(batch_size):
-        onehot_target[i][train_target[i][0]] = 1
-        for j in range(seqlen):
-            onehot_input[i][train_input[i][j]] = 1
+    n_batch = total_size/batch_size
+
 
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
+
+    begintrain = time.time()
+    print "start train"
     #在一个session内完成训练与预测
     with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        opt = optimizer.minimize(model.loss)
+        for epoch in xrange(n_epoch):
+            """
+            进行n_epoch轮训练,每轮训练是逐batch进行的
+            """
+            n = 0
+            for batch in xrange(n_batch):
+                onehot_input = np.zeros([batch_size,seqlen,onehot_size])
+                onehot_target = np.zeros([batch_size,onehot_size])
+                
+                n = 100*batch
+                #生成onehot编码的输入与输出
+                for i in range(batch_size):
+                    onehot_target[i][tr_data[n+i][-1]] = 1
+                    for j in range(seqlen):
+                        onehot_input[i][j][tr_data[n+i][j]] = 1
 
-        model.train(sess,optimizer,epoch,train_input,train_target)
-        ##预测结果以字典保存，关键字为用户编号
-        
+                _,loss = sess.run([opt,model.loss],feed_dict={model.X_input:onehot_input,model.Y_tar:onehot_target})
+
+            #训练最后一个batch为100的数据,数据设置的时候倒着来
+            onehot_input = np.zeros([batch_size,seqlen,onehot_size])
+            onehot_target = np.zeros([batch_size,onehot_size])
+            for i in xrange(batch_size):
+                onehot_target[-i-1][tr_data[-i-1][-1]] = 1
+                for j in xrange(seqlen):
+                    onehot_input[-i-1][j][tr_data[-i-1][j]] = 1
+            _,loss = sess.run([opt,model.loss],feed_dict={model.X_input:onehot_input,model.Y_tar:onehot_target})
+            aveloss = loss.mean()
+            print "epoch %d cost is %f"%(epoch,aveloss)
+
+        endtrain = time.time()
+        print "train run %d miniutes"%((endtrain-begintrain)/60)
+        print "start run pred"
+
+        """
+        开始预测
+        """
+ 
         te_input,te_target = getTestData()
+        n_te_lines = te_input.shape[0]
+        #将te_input转换为onehot编码的形式
+        _te_input = np.zeros([n_te_lines,seqlen,onehot_size])
+
+        for i in xrange(n_te_lines):
+            for j in xrange(seqlen):
+                _te_input[i][j][te_input[i][j]] = 1
 
         """
         #预测返回的是一个列表，每一项为一个用户的预测，预测结果为一个大小为3953的向量 
         #向量每一项对应一部电影的概率值
         """   
-        pred_res = model.pred(sess,te_input)
+        pred_res = model.pred(sess,_te_input)
+        print "start evaluate"
 
-        recall = evaluate(pred_res,te_target)
+        recall = evaluate(pred_res,te_target,seqlen)
         print "recall is %f"%recall
 
 
 
 if __name__ == "__main__":
-    #getMFData()
-    #gettestdata()
+    start = time.time()
+    #getTestData()
+    #getTrainData()
     main() 
+    end = time.time()
+    print "has run %d miniutes"%((end-start)/60)

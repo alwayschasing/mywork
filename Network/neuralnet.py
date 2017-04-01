@@ -26,14 +26,17 @@ class NeuralNetwork(object):
         weights = []
         bias = []
 
-        n_input = cur_input.get_shape()[1]
+        n_input = int(cur_input.get_shape()[1])
         """
         逐层设置系数与偏置
         """
         for layer_i,n_output in enumerate(hidden_dims):
-            W = tf.Variable(tf.random_uniform([n_input,n_output],
-                                             -1.0/n_input,
-                                             1.0/n_input))
+            W = tf.Variable(tf.random_uniform(
+                [n_input,n_output],
+                -1.0/n_input,
+                1.0/n_input,
+                dtype=tf.float32
+                ))
             b = tf.Variable(tf.zeros([n_output]))
             n_input = n_output
             weights.append(W)
@@ -53,7 +56,7 @@ class NeuralNetwork(object):
             cur_output = tf.nn.relu(tf.add(tf.matmul(cur_input,weights[layer_i]),b[layer_i]))
             cur_input = cur_output
         
-        outs = tf.matmul(cur_input,outlayer_W+outlayer_b)
+        outs = tf.nn.relu(tf.matmul(cur_input,outlayer_W+outlayer_b))
 
         #logits:[batch_size,seqlen*onehot_size]
         logits = tf.reshape(outs,[batch_size,onehot_size])
@@ -64,10 +67,7 @@ class NeuralNetwork(object):
             
     def train(self,sess,optimizer,n_epoch,train_input,train_target):
 
-        sess.run(tf.global_variables_initializer())
-        opt = optimizer.minimize(self.loss)
-        for epoch in n_epoch:
-            sess.run(opt,feed_dict={self.X_input:train_input,self.Y_tar:train_target})
+        sess.run(optimizer,feed_dict={self.X_input:train_input,self.Y_tar:train_target})
 
 
     def pred(self,sess,input):
@@ -75,4 +75,4 @@ class NeuralNetwork(object):
         return pred_res
 
 if __name__ == "__main__":
-    NeuralNetwork(9,3953,[200,300,400])
+    NeuralNetwork(9,3953,[2000,1000,400])
