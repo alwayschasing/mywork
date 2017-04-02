@@ -8,20 +8,22 @@ class NetworkModel(object):
     """
     这里的模型只是对item的输入用lstm建模，最后将lstm的输出与user的onehot编码变换进行结合 """ 
     #搭建神经网络结构,部分为lstm
-    def __init__(self,n_step,hidden_size,item_code_size,u_code_size,beta):
+    def __init__(self,n_step,hidden_size,item_code_size,u_code_size,latent_vec_size):
         """
         参数
         n_step: rnn循环的步数
         hidden_size: rnn部分隐藏单元大小
-        item_code_size: item编码向量的大小 
+        item_code_size: item编码向量的大小
+        latent_vec_size: 使用的电影或者用户隐因子向量
+        
         u_code_size: 用户编码向量的大小
-        beta: 正则化系数
         """
         
         self.n_step = n_step
         self.hidden_size = hidden_size
         #这里的输入为电影onehot编码,电影隐向量
         self.item = tf.placeholder(tf.float32,[None,n_step,item_code_size],name="item")
+        self.i_latent_vec = tf.placeholder(tf.float32,[None,n_step,latent_vec_size],name="i_latent_vec")
 
         batch_size = tf.shape(self.item)[0]
 
@@ -29,6 +31,9 @@ class NetworkModel(object):
         _item = tf.transpose(self.item,[1,0,2])
         _item = tf.reshape(_item,[-1,item_code_size])
 
+        #同样的变换应用与i_latent_vec
+        _i_latent_vec = tf.transpose(self.i_latent_vec,[1,0,2])
+        _i_latent_vec = tf.reshape(_i_latent_vec,[-1,latent_vec_size])
 
         #定义变换矩阵V[item_code_size,hidden_size]，W[latent_vec_size,hidden_size]
         V = tf.Variable(tf.random_uniform(
@@ -39,13 +44,17 @@ class NetworkModel(object):
             name="V"
             ))
 
-        inputs_bias = tf.Variable(tf.zeros([hidden_size]))
+        W = tf.Variable(tf.random_uniform(
+            [latent_vec_size,hidden_size],
+            -1.0/hidden_size,
+            1.0/hidden_size,
+            dtype=tf.float32,
+            name="W"
+            ))
 
         #产生lstm的输入[n_step*batch_size,hidden_size]
-        inputs = tf.sigmoid(tf.add(tf.matmul(_item,V),inputs_bias))
-
+        inputs = tf.add(tf.matmul(_item,V),tf.matmul(_i_latent_vec,W))
         inputs = tf.split(0,n_step,inputs) #分step批同时处理
-
 
         #batch_size = tf.shape(self.x_input)[0]
         ##将输入数据变换为rnn网络接受的形式
@@ -54,7 +63,7 @@ class NetworkModel(object):
         #inputs = tf.split(0,n_step,inputs)
         #这里rnn的hidden_size与输入数据的大小相同 
         lstm = tf.nn.rnn_cell.BasicLSTMCell(hidden_size,forget_bias=1.0,state_is_tuple=True)
-        self.rnn_outputs,_states = tf.nn.rnn(lstm,inputs,dtype=tf.float32)
+        self.rnn_outputs,self.states = tf.nn.rnn(lstm,inputs,dtype=tf.float32)
         
         #now shape is [n_step,batch_size,hidden_size]
         inner_outputs = tf.pack(self.rnn_outputs) 
@@ -80,9 +89,12 @@ class NetworkModel(object):
         #需要输入的数据
         self.user = tf.placeholder(tf.float32,[None,self.n_step,u_code_size],name="usercode")
         
+        self.u_latent_vec = tf.placeholder(tf.float32,[None,self.n_step,latent_vec_size],name="user_latent_vec")
 
         _user = tf.transpose(self.user,[1,0,2])
         _user = tf.reshape(_user,[-1,u_code_size])
+        _u_latent_vec = tf.transpose(self.u_latent_vec,[1,0,2])
+        _u_latent_vec = tf.reshape(_u_latent_vec,[-1,latent_vec_size])
         #定义用户模型部分参数P,Q
         #用户模型部分隐单元大小默认与rnn部分相同
         u_model_hidden_size = hidden_size 
@@ -93,13 +105,16 @@ class NetworkModel(object):
             1.0/u_code_size
             ))
 
-        u_bias = tf.Variable(tf.zeros([u_model_hidden_size]))
-
+        Q = tf.Variable(tf.random_uniform(
+            [latent_vec_size,u_model_hidden_size],
+            -1.0/latent_vec_size,
+            1.0/latent_vec_size
+            ))
 
         #用户模型部分的输出为user*P+ulaten_vec*Q,shape:[batch_size*n_step,u_model_hidden_size]
-        u_inner_outs = tf.add(tf.matmul(_user,P),u_bias)
+        u_inner_outs = tf.add(tf.matmul(_user,P),tf.matmul(_u_latent_vec,Q))
         #加一个激活函数,并将输出复制n_step份
-        u_inner_outs = tf.nn.sigmoid(u_inner_outs)
+        u_inner_outs = tf.nn.relu(u_inner_outs)
         
 
         #与用户模型输出相乘的矩阵Z
@@ -125,12 +140,8 @@ class NetworkModel(object):
         self.y_target = tf.placeholder(tf.float32,[None,n_step,item_code_size],name="y_target")
 
         
-        ##损失使用交叉熵,并使用正则抑制过拟合
-        self.cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.Outs,labels=self.y_target)
-                                +beta*tf.nn.l2_loss(Y)
-                                +beta*tf.nn.l2_loss(Z)
-                                +beta*tf.nn.l2_loss(P))
-
+        ##损失使用交叉熵
+        self.cost = tf.nn.softmax_cross_entropy_with_logits(logits=self.Outs,labels=self.y_target,dim=-1,name="loss")
 
     def train(self,sess,optimizer,epoch,train_data,i_latent_set,u_latent_set,item_code_size,u_code_size):
         """

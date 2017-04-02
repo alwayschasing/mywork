@@ -2,7 +2,6 @@
 # coding=utf-8
 
 import tensorflow as tf
-import math
 
 class LSTM(object):
 
@@ -20,7 +19,7 @@ class LSTM(object):
         inputs = tf.reshape(inputs,[-1,hidden_size])
         inputs = tf.split(0,n_step,inputs)
         #这里rnn的hidden_size与输入数据的大小相同 
-        lstm = tf.nn.rnn_cell.BasicLSTMCell(hidden_size,forget_bias=1.0,state_is_tuple=True)
+        lstm = tf.nn.rnn_cell.BasicLSTMCell(hidden_size,forget_bias=0.5,state_is_tuple=True)
         self.rnn_outputs,self.states = tf.nn.rnn(lstm,inputs,dtype=tf.float32)
         
         inner_outputs = tf.pack(self.rnn_outputs)
@@ -47,14 +46,16 @@ class LSTM(object):
         #self.cost = tf.reduce_mean(tf.pow(tf.subtract(self.outputs,self.y_target),2))
         self.cost = tf.nn.l2_loss(tf.subtract(self.outputs,self.y_target))
 
-    def train(self,sess,train_data,i_latent_set,optimizer,epoch):
+    def batch_train(self,sess,train_data,i_latent_set,optimizer,epoch):
         #i_latent_set表示物品隐向量表示集合
-        sess.run(tf.global_variables_initializer())
         optimizer = optimizer.minimize(self.cost)
         #batch的数量，这里一个用户的数据为一个batch
         n_batch = len(train_data)
         for k in range(epoch):
             cost = 0
+            """
+            每个用户为一个batch 
+            """
             for i in range(n_batch):
                 #user = train_data[i][0][0]
                 #生成一个batch的训练数据
@@ -87,8 +88,6 @@ class LSTM(object):
 
     def pred(self,sess,te_data,item_latent_vec):
 
-        #使用字典保存预测结果，关键字为用户编号
-        res = dict()
         input = []
         for line in te_data:
             #u = line[0]
@@ -97,7 +96,7 @@ class LSTM(object):
             for i in te_input: 
                 tmp.append(item_latent_vec[i])
             input.append(tmp)
-            
+
         outputs = sess.run(self.outputs,feed_dict={
             self.x_input:input,
             #self.u:u

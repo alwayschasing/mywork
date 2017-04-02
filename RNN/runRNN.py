@@ -80,7 +80,7 @@ def getTestData():
     fp.close()
     return te_input,te_target
 
-def knn(index,item,item_set,k,history):
+def knn(item,item_set,k,history):
     """
     item为一个向量，item_set为向量列表，
     k近邻返回的是item_set的向量索引，也就是
@@ -96,20 +96,20 @@ def knn(index,item,item_set,k,history):
 
     #根据距离数组中的值排序数组索引,找出k近邻
     sortedDistIndices = dists.argsort() 
-    k_list = []
-    count = 0
-    #除去已经有记录的电影
-    for i in sortedDistIndices:
-        if i in history:
-            continue
-        else:
-            k_list.append(i)
-            count += 1
-            if count >= k:
-                break
-    #print "count:%d"%count
-    return k_list
-    #return sortedDistIndices[0:k]
+    #k_list = []
+    #count = 0
+    ##除去已经有记录的电影
+    #for i in sortedDistIndices:
+        #if i in history:
+            #continue
+        #else:
+            #k_list.append(i)
+            #count += 1
+            #if count >= k:
+                #break
+    ##print "count:%d"%count
+    #return k_list
+    return sortedDistIndices[0:k]
 
 
 def evaluate(pred_res,target,item_latent_vec):
@@ -133,8 +133,7 @@ def evaluate(pred_res,target,item_latent_vec):
         #返回的推荐为用户编号
         #该用户的历史列表，转换为整数型
         his = np.asarray(userhistory[k][1:],np.int32)
-        his = his.tolist()
-        recommed = knn(k,v,item_latent_vec,10,his)
+        recommed = knn(v,item_latent_vec,10,his)
         writer.writerow(recommed)
         hit = 0
         for i in recommed:
@@ -170,13 +169,15 @@ def main():
     model = LSTM(n_step=n_step,hidden_size=hidden_size,n_user=n_user)
     
     #训练轮数
-    epoch = 15
+    epoch = 10
     learning_rate = 0.1
 
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     #在一个session内完成训练与预测
     with tf.Session() as sess:
-        model.train(sess,tr_data,item_latent_vec,optimizer,epoch)
+        sess.run(tf.global_variables_initializer())
+
+        model.batch_train(sess,tr_data,item_latent_vec,optimizer,epoch)
         ##预测结果以字典保存，关键字为用户编号
         
         te_input,te_target = getTestData()
@@ -190,6 +191,6 @@ def main():
 
 if __name__ == "__main__":
     #getMFData()
-    #gettestdata()
+    #getTestData()
     #getTrainData()
     main() 

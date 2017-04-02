@@ -10,6 +10,49 @@ from onehotRNN import NetworkModel
 rootdir = "/home/lrh/graduation_project/"
 neighbor_k = 10
 
+def getMFData():
+    fpin = open("/home/lrh/graduation_project/MF/MFModel","r")
+    lines = fpin.readlines()
+    num = len(lines)
+    
+    max_n_item = 0
+    max_n_user = 0
+    for i in range(5,num):
+        line = lines[i].split()
+        flag = line[0][0]
+        if flag == 'p':
+            u_index = int(line[0][1:])
+            if u_index > max_n_user:
+                max_n_user = u_index
+        elif flag == 'q':
+            i_index = int(line[0][1:])
+            if i_index > max_n_item:
+                max_n_item = i_index
+
+    latent_dim = 10
+    #shape[0]加1是因为实际数据从1而不是从0开始
+    item_latent_vec = np.zeros([max_n_item+1,latent_dim],dtype=np.float32)
+    user_latent_vec = np.zeros([max_n_user+1,latent_dim],dtype=np.float32)
+    for i in range(5,num):
+        line = lines[i].split()
+        flag = line[0][0]
+        if flag == 'p':
+            u_index = int(line[0][1:])
+            sign = line[1]
+            if(sign == 'T'):
+                vec = line[2:]
+                user_latent_vec[u_index] = vec
+        elif flag == 'q':
+            i_index = int(line[0][1:])
+            sign = line[1]
+            if(sign=='T'):
+                vec = line[2:]
+                item_latent_vec[i_index] = vec
+    print item_latent_vec.shape[1]
+    print "has got MFdata"
+
+    fpin.close()
+    return user_latent_vec,item_latent_vec
 
 def getTrainData():
     """
@@ -102,6 +145,7 @@ def main():
     #这里tr_data按每个用户一个list作为一个训练batch，数据表示为
     #item编号，还没有表示为隐向量
     tr_data = getTrainData()
+    user_latent_vec,item_latent_vec = getMFData()
     
     #设置LSTM模型的参数
     #tr_data[0]为一个batch,tr_data[0][0]为第一个batch中第一个序列的长度，包括用户编号
@@ -110,6 +154,7 @@ def main():
     
     #这里循环神经网络隐单元的大小
     hidden_size = 20
+    latent_vec_size = user_latent_vec.shape[1]
     max_item_index = 3952    
     max_user_index = 6040
 
@@ -117,7 +162,7 @@ def main():
     u_code_size = max_user_index+1
 
     #参数有:n_step,hidden_size,item_code_size,u_code_size,latent_vec_size
-    model = NetworkModel(n_step,hidden_size,item_code_size,u_code_size)
+    model = NetworkModel(n_step,hidden_size,item_code_size,u_code_size,latent_vec_size)
     
     #训练轮数
     epoch = 10
@@ -132,7 +177,7 @@ def main():
 
         sess.run(tf.global_variables_initializer())
 
-        model.train(sess,optimizer,epoch,tr_data,item_code_size,u_code_size)
+        model.train(sess,optimizer,epoch,tr_data,item_latent_vec,user_latent_vec,item_code_size,u_code_size)
         ##预测结果以字典保存，关键字为用户编号
         
         now = time.time()
@@ -143,7 +188,7 @@ def main():
         #预测返回的是一个列表，每一项为一个用户的预测，预测结果为一个大小为max_item_index+1的向量 
         #向量每一项对应一部电影的概率值
         """   
-        pred_res = model.pred(sess,te_input,item_code_size,u_code_size)
+        pred_res = model.pred(sess,te_input,item_latent_vec,user_latent_vec,item_code_size,u_code_size)
 
         recommed_len = len(te_target[0])
         recall = evaluate(pred_res,te_target,recommed_len)
