@@ -99,13 +99,13 @@ def evaluate(pred_res,target,recommend_len):
     #向量每一项对应一部电影的概率值
     """   
 
-    fp = open("../data/ml-1m/userbased.train.csv","r")
+    fp = open("/home/lrh/graduation_project/data/ml-1m/userbased.train.csv","r")
     userhistory = list(csv.reader(fp))
     recall = 0.0
     n_user = len(pred_res)
     #预测目标的个数
     n_target= len(target[0])
-    savefp = open("../data/ml-1m/predicted_resOneHot.csv","w")
+    savefp = open("/home/lrh/graduation_project/data/ml-1m/predicted_resOneHot.csv","w")
     writer = csv.writer(savefp)
     hituser = 0
     for k,v in enumerate(pred_res):
@@ -116,7 +116,7 @@ def evaluate(pred_res,target,recommend_len):
         #过滤掉已经看过的电影
         rec_list = []
         count = 0
-        for index in recommend:
+        for index in recommend[-1::-1]:
             if index not in history:
                 rec_list.append(index)
                 count += 1
@@ -165,8 +165,8 @@ def main():
     model = NetworkModel(n_step,hidden_size,item_code_size,u_code_size,latent_vec_size)
     
     #训练轮数
-    epoch = 10
-    learning_rate = 0.05
+    epoch = 6
+    learning_rate = 0.1
 
     print "start train"
     begin = time.time()

@@ -114,7 +114,7 @@ class NetworkModel(object):
         #用户模型部分的输出为user*P+ulaten_vec*Q,shape:[batch_size*n_step,u_model_hidden_size]
         u_inner_outs = tf.add(tf.matmul(_user,P),tf.matmul(_u_latent_vec,Q))
         #加一个激活函数,并将输出复制n_step份
-        u_inner_outs = tf.nn.relu(u_inner_outs)
+        u_inner_outs = tf.sigmoid(u_inner_outs)
         
 
         #与用户模型输出相乘的矩阵Z
@@ -141,7 +141,9 @@ class NetworkModel(object):
 
         
         ##损失使用交叉熵
-        self.cost = tf.nn.softmax_cross_entropy_with_logits(logits=self.Outs,labels=self.y_target,dim=-1,name="loss")
+        self.cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.Outs,labels=self.y_target,dim=-1,name="loss")
+                                  +tf.nn.l2_loss(Y)
+                                    +tf.nn.l2_loss(Z))
 
     def train(self,sess,optimizer,epoch,train_data,i_latent_set,u_latent_set,item_code_size,u_code_size):
         """

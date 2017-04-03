@@ -70,10 +70,11 @@ def evaluate(pred_res,target,recommend_len):
         #该用户的历史列表，转换为整数型
         history = np.asarray(userhistory[k][1:],np.int32)
         recommend = v.argsort() 
+        #rec_list = recommend[-recommend_len:]
         #过滤掉已经看过的电影
         rec_list = []
         count = 0
-        for index in recommend:
+        for index in recommend[-1::-1]:
             if index not in history:
                 rec_list.append(index)
                 count += 1
@@ -115,13 +116,14 @@ def main():
 
     item_code_size = max_item_index+1
     u_code_size = max_user_index+1
+    beta = 0.1 #正则化系数
 
-    #参数有:n_step,hidden_size,item_code_size,u_code_size,latent_vec_size
-    model = NetworkModel(n_step,hidden_size,item_code_size,u_code_size)
+    #参数有:n_step,hidden_size,item_code_size,u_code_size,beta
+    model = NetworkModel(n_step,hidden_size,item_code_size,u_code_size,beta)
     
     #训练轮数
-    epoch = 10
-    learning_rate = 0.05
+    epoch = 6
+    learning_rate = 0.1
 
     print "start train"
     begin = time.time()

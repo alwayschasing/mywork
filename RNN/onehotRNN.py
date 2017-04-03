@@ -119,6 +119,7 @@ class NetworkModel(object):
         #恢复与输入，目标向量相同的形式
         logits = tf.transpose(logits,[1,0,2])#shape:[batch_size,n_step,item_code_size]
         #softmax:dim指做softmax计算的维度，默认为-1，即最后一个维度
+        #self.Outs = tf.nn.log_softmax(logits,dim=-1,name="softmax_outs")
         self.Outs = tf.nn.softmax(logits,dim=-1,name="softmax_outs")
 
         #目标向量
@@ -128,11 +129,10 @@ class NetworkModel(object):
         ##损失使用交叉熵,并使用正则抑制过拟合
         self.cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.Outs,labels=self.y_target)
                                 +beta*tf.nn.l2_loss(Y)
-                                +beta*tf.nn.l2_loss(Z)
-                                +beta*tf.nn.l2_loss(P))
+                                +beta*tf.nn.l2_loss(Z))
 
 
-    def train(self,sess,optimizer,epoch,train_data,i_latent_set,u_latent_set,item_code_size,u_code_size):
+    def train(self,sess,optimizer,epoch,train_data,item_code_size,u_code_size):
         """
         将数据的部分准备也放在了这里，train_data只包含所有用户的编号数据，
         一个用户的数据为一个batch，每个batch的每一个为一个序列，行首为用户编号
@@ -158,25 +158,21 @@ class NetworkModel(object):
                 batch_u_code = np.zeros([batch_size,self.n_step,u_code_size])
                 batch_u_code[:,:,user] = 1 #将user编号作为位置索引
                 #生成shape:[batch_size,n_step,latent_vec_size]
-                batch_user_vec = [[u_latent_set[user] for l in range(self.n_step)] for p in range(batch_size)]
 
                 #生成一个batch的训练数据
                 batch_input = []
                 batch_target = []
-                batch_item_vec = []
 
                 #每个序列数据为一个line
                 for line in train_data[i]:
                     #对序列数据one-hot编码
                     input_code = np.zeros([self.n_step,item_code_size])
                     target_code = np.zeros([self.n_step,item_code_size])
-                    tmp_item_vec = [] 
 
                     count = 0 #计数step数据处理    
                     for i_index in line[1:-1]:
                         i_index = int(i_index)
                         input_code[count][i_index] = 1
-                        tmp_item_vec.append(i_latent_set[i_index])
                         count += 1
 
                     count = 0
@@ -184,7 +180,6 @@ class NetworkModel(object):
                         i_index = int(i_index)
                         target_code[count][i_index] = 1
                         count += 1
-                    batch_item_vec.append(tmp_item_vec)
                     batch_input.append(input_code) 
                     batch_target.append(target_code)
 
@@ -193,15 +188,13 @@ class NetworkModel(object):
                 #用户训练序列的个数
                 _,tmpcost = sess.run([optimizer,self.cost],feed_dict={
                     self.item:batch_input,
-                    self.i_latent_vec:batch_item_vec,
                     self.user:batch_u_code,
-                    self.u_latent_vec:batch_user_vec,
                     self.y_target:batch_target})
                 tmpcost = tmpcost.mean()
                 cost += tmpcost/len(train_data[i])
             print "the %d epoch cost is %f"%(k,cost/n_batch)
 
-    def pred(self,sess,te_data,item_latent_vec,user_latent_vec,item_code_size,u_code_size):
+    def pred(self,sess,te_data,item_code_size,u_code_size):
         """
         预测返回的是一个列表，每一项为一个用户的预测，预测结果为一个大小为max_item_index+1的向量 
         向量每一项对应一部电影的概率值
@@ -211,9 +204,7 @@ class NetworkModel(object):
         #使用数组保存预测结果，索引为用户编号
 
         batch_item = np.zeros([batch_size,self.n_step,item_code_size])
-        batch_item_vec = np.zeros([batch_size,self.n_step,item_latent_vec.shape[1]])
         batch_u_code = np.zeros([batch_size,self.n_step,u_code_size])
-        batch_user_vec = np.zeros([batch_size,self.n_step,user_latent_vec.shape[1]])
         n_step = len(te_data[0])-1
         for i in range(batch_size):
             line = te_data[i]
@@ -222,16 +213,12 @@ class NetworkModel(object):
                 #行首为用户编号，所以j+1
                 item = int(te_data[i][j+1])
                 batch_item[i][j][item] = 1
-                batch_item_vec[i][j] = item_latent_vec[item]
                 batch_u_code[i][j][u] = 1
-                batch_user_vec[i][j] = user_latent_vec[u]
             
         
         pred_res = sess.run(self.Outs,feed_dict={
             self.item:batch_item,
-            self.i_latent_vec:batch_item_vec,
             self.user:batch_u_code,
-            self.u_latent_vec:batch_user_vec
         })
 
         #预测结果为[batch_size,item_onehot_size]
@@ -241,5 +228,5 @@ class NetworkModel(object):
 
 if __name__ == "__main__":
 
-    model = NetworkModel(n_step=9,hidden_size=10,item_code_size=3953,u_code_size=6041,latent_vec_size=10)
+    model = NetworkModel(n_step=9,hidden_size=10,item_code_size=3953,u_code_size=6041,beta=0.05)
     #test
