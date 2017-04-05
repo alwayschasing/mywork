@@ -8,7 +8,7 @@ class NetworkModel(object):
     """
     这里的模型只是对item的输入用lstm建模，最后将lstm的输出与user的onehot编码变换进行结合 """ 
     #搭建神经网络结构,部分为lstm
-    def __init__(self,n_step,hidden_size,item_code_size,u_code_size,beta):
+    def __init__(self,n_step,hidden_size,item_code_size,u_code_size,r_code_size,beta):
         """
         参数
         n_step: rnn循环的步数
@@ -20,14 +20,20 @@ class NetworkModel(object):
         
         self.n_step = n_step
         self.hidden_size = hidden_size
+        self.item_code_size = item_code_size
+        self.u_code_size = u_code_size
+        self.r_code_size = r_code_size
         #这里的输入为电影onehot编码,电影隐向量
         self.item = tf.placeholder(tf.float32,[None,n_step,item_code_size],name="item")
+        self.rating = tf.placeholder(tf.float32,[None,n_step,r_code_size],name="rating")
 
         batch_size = tf.shape(self.item)[0]
 
         #变换数据为可矩阵相乘,变换后item形式为：[n_step*batch_size,item_code_size]
         _item = tf.transpose(self.item,[1,0,2])
         _item = tf.reshape(_item,[-1,item_code_size])
+        _rating = tf.transpose(self.rating,[1,0,2])
+        _rating = tf.reshape(_rating,[-1,r_code_size])
 
 
         #定义变换矩阵V[item_code_size,hidden_size]，W[latent_vec_size,hidden_size]
@@ -36,13 +42,19 @@ class NetworkModel(object):
             -1.0/hidden_size,
             1.0/hidden_size,
             dtype=tf.float32,
-            name="V"
+            name="W"
             ))
 
-        inputs_bias = tf.Variable(tf.zeros([hidden_size]))
+        V = tf.Variable(tf.random_uniform(
+            [r_code_size,hidden_size],
+            -1.0/hidden_size,
+            1.0/hidden_size,
+            dtype=tf.float32
+            ))
+
 
         #产生lstm的输入[n_step*batch_size,hidden_size]
-        inputs = tf.sigmoid(tf.add(tf.matmul(_item,W),inputs_bias))
+        inputs = tf.sigmoid(tf.add(tf.matmul(_item,W),tf.matmul(_rating,V)))
 
         inputs = tf.split(0,n_step,inputs) #分step批同时处理
 
@@ -93,11 +105,10 @@ class NetworkModel(object):
             1.0/u_code_size
             ))
 
-        u_bias = tf.Variable(tf.zeros([u_model_hidden_size]))
 
 
         #用户模型部分的输出为user*P+ulaten_vec*Q,shape:[batch_size*n_step,u_model_hidden_size]
-        u_inner_outs = tf.add(tf.matmul(_user,P),u_bias)
+        u_inner_outs = tf.matmul(_user,P)
         #加一个激活函数,并将输出复制n_step份
         u_inner_outs = tf.nn.sigmoid(u_inner_outs)
         
@@ -131,98 +142,69 @@ class NetworkModel(object):
                                 +beta*tf.nn.l2_loss(Y)
                                 +beta*tf.nn.l2_loss(Z)
                                 +beta*tf.nn.l2_loss(W)
-                                +beta*tf.nn.l2_loss(P)
-                                +beta*tf.nn.l2_loss(inputs_bias)
-                                +beta*tf.nn.l2_loss(u_bias))
+                                +beta*tf.nn.l2_loss(V)
+                                +beta*tf.nn.l2_loss(P))
 
 
-    def train(self,sess,optimizer,epoch,train_data,item_code_size,u_code_size):
+    def train(self,sess,optimizer,train_data,item_code_size,u_code_size,r_code_size):
         """
-        将数据的部分准备也放在了这里，train_data只包含所有用户的编号数据，
-        一个用户的数据为一个batch，每个batch的每一个为一个序列，行首为用户编号
-
-        同时要生成用户以及item的one-hot编码,使用max_item_index,max_user_index
-        用户数据需要n_step份以喂给神经网络
+        将一个batch的数据准备为onehot形式,并进行一个batch的训练
+        每个batch的一行形式为:
+        行首为用户编号,之后为电影及评分对
         """
-        optimizer = optimizer.minimize(self.cost)
-        #batch的数量，这里一个用户的数据为一个batch
-        n_batch = len(train_data)
-        for k in range(epoch):
-            """
-            训练epoch轮
-            """
-            cost = 0
-            for i in range(n_batch):
-                """
-                按batch轮着训练
-                一个用户的数据为一个batch
-                """
-                batch_size = len(train_data[i])
-                user = int(train_data[i][0][0])
-                batch_u_code = np.zeros([batch_size,self.n_step,u_code_size])
-                batch_u_code[:,:,user] = 1 #将user编号作为位置索引
-                #生成shape:[batch_size,n_step,latent_vec_size]
+        batch_size = train_data.shape[0]
 
-                #生成一个batch的训练数据
-                batch_input = []
-                batch_target = []
+        batch_u_code = np.zeros([batch_size,self.n_step,u_code_size])
+        batch_item_code = np.zeros([batch_size,self.n_step,item_code_size])
+        batch_r_code = np.zeros([batch_size,self.n_step,r_code_size])
+        batch_target = np.zeros([batch_size,self.n_step,item_code_size])
 
-                #每个序列数据为一个line
-                for line in train_data[i]:
-                    #对序列数据one-hot编码
-                    input_code = np.zeros([self.n_step,item_code_size])
-                    target_code = np.zeros([self.n_step,item_code_size])
+        for i in range(batch_size):
+            user = train_data[i][0]
+            for j in range(self.n_step):
+                item = train_data[i][2*j+1]
+                nextitem = train_data[i][2*(j+1)+1]
+                rating = train_data[i][1+2*j+1]
+                batch_u_code[i][j][user] = 1
+                batch_item_code[i][j][item] = 1
+                batch_r_code[i][j][rating-1] = 1 #rating值比其onehot编码1位置大1
+                batch_target[i][j][nextitem] = 1
+        _,cost = sess.run([optimizer,self.cost],feed_dict={
+            self.item:batch_item_code,
+            self.user:batch_u_code,
+            self.rating:batch_r_code,
+            self.y_target:batch_target})
+        return cost 
 
-                    count = 0 #计数step数据处理    
-                    for i_index in line[1:-1]:
-                        i_index = int(i_index)
-                        input_code[count][i_index] = 1
-                        count += 1
 
-                    count = 0
-                    for i_index in line[2:]:
-                        i_index = int(i_index)
-                        target_code[count][i_index] = 1
-                        count += 1
-                    batch_input.append(input_code) 
-                    batch_target.append(target_code)
-
-                #生成一个batch的数据后训练,数据序列长度为9
-                #分批累计平均损失,这里train_data[i].shape[0]指一个
-                #用户训练序列的个数
-                _,tmpcost = sess.run([optimizer,self.cost],feed_dict={
-                    self.item:batch_input,
-                    self.user:batch_u_code,
-                    self.y_target:batch_target})
-                tmpcost = tmpcost.mean()
-                cost += tmpcost/len(train_data[i])
-            print "the %d epoch cost is %f"%(k,cost/n_batch)
-
-    def pred(self,sess,te_data,item_code_size,u_code_size):
+    def pred(self,sess,te_data,item_code_size,u_code_size,r_code_size):
         """
         预测返回的是一个列表，每一项为一个用户的预测，预测结果为一个大小为max_item_index+1的向量 
         向量每一项对应一部电影的概率值
         """
 
-        batch_size = len(te_data)
+        batch_size = te_data.shape[0]
         #使用数组保存预测结果，索引为用户编号
 
-        batch_item = np.zeros([batch_size,self.n_step,item_code_size])
+        batch_item_code = np.zeros([batch_size,self.n_step,item_code_size])
         batch_u_code = np.zeros([batch_size,self.n_step,u_code_size])
-        n_step = len(te_data[0])-1
+        batch_r_code = np.zeros([batch_size,self.n_step,r_code_size])
+
         for i in range(batch_size):
-            line = te_data[i]
-            u = int(line[0])
-            for j in range(n_step):
+            user = te_data[i][0]
+            for j in range(self.n_step):
                 #行首为用户编号，所以j+1
-                item = int(te_data[i][j+1])
-                batch_item[i][j][item] = 1
-                batch_u_code[i][j][u] = 1
+                item = te_data[i][1+j*2]
+                rating = te_data[i][1+j*2+1]
+                batch_item_code[i][j][item] = 1
+                batch_u_code[i][j][user] = 1
+                batch_r_code[i][j][rating-1] = 1
             
         
         pred_res = sess.run(self.Outs,feed_dict={
-            self.item:batch_item,
-            self.user:batch_u_code,
+            self.item:batch_item_code,
+            self.rating:batch_r_code,
+            self.user:batch_u_code
         })
 
         #预测结果为[batch_size,item_onehot_size]
@@ -232,5 +214,5 @@ class NetworkModel(object):
 
 if __name__ == "__main__":
 
-    model = NetworkModel(n_step=9,hidden_size=10,item_code_size=3953,u_code_size=6041,beta=0.05)
+    model = NetworkModel(n_step=9,hidden_size=10,item_code_size=3953,u_code_size=6041,r_code_size=5,beta=0.05)
     #test

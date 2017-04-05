@@ -105,7 +105,7 @@ def evaluate(pred_res,target,recommend_len):
     n_user = len(pred_res)
     #预测目标的个数
     n_target= len(target[0])
-    savefp = open("/home/lrh/graduation_project/data/ml-1m/predicted_resOneHot.csv","w")
+    savefp = open("/home/lrh/graduation_project/data/ml-1m/predicted_resOneHotTest.csv","w")
     writer = csv.writer(savefp)
     hituser = 0
     for k,v in enumerate(pred_res):
@@ -153,16 +153,17 @@ def main():
     n_step = len(tr_data[0][0])-2 #最后一个留作训练目标
     
     #这里循环神经网络隐单元的大小
-    hidden_size = 20
+    hidden_size = 10
     latent_vec_size = user_latent_vec.shape[1]
     max_item_index = 3952    
     max_user_index = 6040
 
     item_code_size = max_item_index+1
     u_code_size = max_user_index+1
+    beta = 0.05
 
     #参数有:n_step,hidden_size,item_code_size,u_code_size,latent_vec_size
-    model = NetworkModel(n_step,hidden_size,item_code_size,u_code_size,latent_vec_size)
+    model = NetworkModel(n_step,hidden_size,item_code_size,u_code_size,latent_vec_size,beta)
     
     #训练轮数
     epoch = 6

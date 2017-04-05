@@ -60,7 +60,7 @@ class NeuralNetwork(object):
 
         #logits:[batch_size,seqlen*onehot_size]
         logits = tf.reshape(outs,[batch_size,onehot_size])
-        self.softmax_outs = tf.nn.softmax(logits,dim=-1)
+        self.softmax_outs = tf.nn.log_softmax(logits,dim=-1)
 
         self.loss = tf.nn.softmax_cross_entropy_with_logits(logits,self.Y_tar,dim=-1,name="loss")
 

@@ -25,7 +25,7 @@ def getTrainData():
     for line in lines:
         training_data.append(line[1:])
     fpin.close()
-    training_data = np.asarray(training_data,np.int32)
+    training_data = np.asarray(training_data,np.int32) 
     print training_data.shape
     #training_data:[n_user,var_batch_size,n_step]
     return training_data
@@ -48,8 +48,8 @@ def evaluate(pred_res,target,recommend_len):
     #向量每一项对应一部电影的概率值
     """   
 
-    fp = open("../data/ml-1m/userbased.train.csv","r")
-    userhistory = list(csv.reader(fp))
+    #fp = open("../data/ml-1m/userbased.train.csv","r")
+    #userhistory = list(csv.reader(fp))
     recall = 0.0
     n_user = len(pred_res)
     #预测目标的个数
@@ -60,17 +60,17 @@ def evaluate(pred_res,target,recommend_len):
     for k,v in enumerate(pred_res):
         #返回的推荐为用户编号
         #该用户的历史列表，转换为整数型
-        history = np.asarray(userhistory[k][1:],np.int32)
+        #history = np.asarray(userhistory[k][1:],np.int32)
         recommend = v.argsort() 
         #过滤掉已经看过的电影
-        rec_list = []
-        count = 0
-        for index in recommend:
-            if index not in history:
-                rec_list.append(index)
-                count += 1
-                if count >= recommend_len:
-                    break
+        rec_list = recommend[-recommend_len:]
+        #count = 0
+        #for index in recommend[-recommend_len:-1]:
+            #if index not in history:
+                #rec_list.append(index)
+                #count += 1
+                #if count >= recommend_len:
+                    #break
         
         #统计每个用户的命中数
         writer.writerow(rec_list)
@@ -106,7 +106,7 @@ def main():
     model = NeuralNetwork(seqlen,onehot_size,hidden_dims)
     
     #训练轮数
-    n_epoch = 15
+    n_epoch = 6
     learning_rate = 0.1
     #train_input = tr_data[:,:-1]
     #train_target = tr_data[:,-1]
@@ -152,8 +152,7 @@ def main():
                     onehot_input[-i-1][j][tr_data[-i-1][j]] = 1
             _,loss = sess.run([opt,model.loss],feed_dict={model.X_input:onehot_input,model.Y_tar:onehot_target})
             aveloss = loss.mean()
-            sumloss = loss.sum()
-            print "epoch %d cost is %f"%(epoch,sumloss)
+            print "epoch %d cost is %f"%(epoch,aveloss)
 
         endtrain = time.time()
         print "train run %d miniutes"%((endtrain-begintrain)/60)

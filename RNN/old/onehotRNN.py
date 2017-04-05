@@ -8,7 +8,7 @@ class NetworkModel(object):
     """
     这里的模型只是对item的输入用lstm建模，最后将lstm的输出与user的onehot编码变换进行结合 """ 
     #搭建神经网络结构,部分为lstm
-    def __init__(self,n_step,hidden_size,item_code_size,u_code_size,latent_vec_size):
+    def __init__(self,n_step,hidden_size,item_code_size,u_code_size,latent_vec_size,beta):
         """
         参数
         n_step: rnn循环的步数
@@ -141,9 +141,9 @@ class NetworkModel(object):
 
         
         ##损失使用交叉熵
-        self.cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.Outs,labels=self.y_target,dim=-1,name="loss")
-                                  +tf.nn.l2_loss(Y)
-                                    +tf.nn.l2_loss(Z))
+        self.cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.Outs,labels=self.y_target)
+                                  +beta*tf.nn.l2_loss(Y)
+                                    +beta*tf.nn.l2_loss(Z))
 
     def train(self,sess,optimizer,epoch,train_data,i_latent_set,u_latent_set,item_code_size,u_code_size):
         """
