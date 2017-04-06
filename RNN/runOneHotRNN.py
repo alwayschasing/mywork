@@ -11,6 +11,11 @@ rootdir = "/home/lrh/graduation_project/"
 neighbor_k = 10
 
 
+def getTrainDataBatches():
+    fp = open("/home/lrh/graduation_project/data/ml-1m/rnndata2.csv","r")
+    lines = list(csv.reader(fp))
+    training_data = np.asarray(lines)
+    return training_data
 def getTrainData():
     """
     返回的数据：涉及同一用户的序列数据组成一个列表，即为一个batch
@@ -19,7 +24,7 @@ def getTrainData():
     return [n_user,batch_size(不同用户大小不一样),vec_size]
     每个batch的每一行的行首为用户编号
     """
-    fpin = open("/home/lrh/graduation_project/data/ml-1m/rnndata.csv","r")
+    fpin = open("/home/lrh/graduation_project/data/ml-1m/rnndata2.csv","r")
     lines = list(csv.reader(fpin))
     training_data = []
     n = len(lines)

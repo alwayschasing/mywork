@@ -33,6 +33,8 @@ class Autoencoder(object):
                                              1.0/math.sqrt(n_input)))
             b = tf.Variable(tf.zeros([n_output]))
             encoder.append(W)
+
+        for w in encoder:
             output = tf.nn.tanh(tf.matmul(current_input,W)+b)
             current_input = output
 

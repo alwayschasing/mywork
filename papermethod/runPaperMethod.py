@@ -5,7 +5,7 @@ import csv
 import tensorflow as tf
 import numpy as np
 import time
-from onehotRNN import NetworkModel 
+from reviseOnehotRNN import NetworkModel 
 
 rootdir = "/home/lrh/graduation_project/"
 neighbor_k = 10

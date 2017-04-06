@@ -69,15 +69,6 @@ def getTrainData():
     training_data.append(tmp)
     fpin.close()
     return training_data
-def getBatchTrainData():
-    """
-    返回的数据不是一个用户一个batch,混合起来训练
-    """
-    fp = open("/home/lrh/graduation_project/data/ml-1m/rnndata2.csv","r")
-    lines = list(csv.reader(fp))
-    training_data = np.asarray(lines,np.int32)
-    return training_data
-
 
 def getTestData():
     fp = open("/home/lrh/graduation_project/data/ml-1m/rnntestdata.csv","r")
@@ -129,20 +120,20 @@ def evaluate(pred_res,target,item_latent_vec):
     以k近邻来选择推荐
     n_user为用户数量
     """
-    fp = open("../data/ml-1m/userbased.train.csv","r")
+    fp = open("/home/lrh/graduation_project/data/ml-1m/userbased.train.csv","r")
     userhistory = list(csv.reader(fp))
     recall = 0.0
     n_user = len(pred_res)
     #预测目标的个数
     n_target= len(target[0])
-    savefp = open("../data/ml-1m/predicted_res.csv","w")
+    savefp = open("/home/lrh/graduation_project/data/ml-1m/predicted_res.csv","w")
     writer = csv.writer(savefp)
     hituser = 0
     for k,v in enumerate(pred_res):
         #返回的推荐为用户编号
         #该用户的历史列表，转换为整数型
         his = np.asarray(userhistory[k][1:],np.int32)
-        recommed = knn(v,item_latent_vec,10,his)
+        recommed = knn(v,item_latent_vec,20,his)
         writer.writerow(recommed)
         hit = 0
         for i in recommed:
@@ -151,7 +142,7 @@ def evaluate(pred_res,target,item_latent_vec):
         if hit != 0:
             hituser += 1
         recall += float(hit)/n_target
-    print "hituser:%d"%hituser
+    print "hituser:%d"%hituser 
     averec = recall/hituser
     print "relhit averec:%f"%averec
     recall = recall/n_user 
@@ -162,36 +153,31 @@ def main():
 
     #这里tr_data按每个用户一个list作为一个训练batch，数据表示为
     #item编号，还没有表示为隐向量
-    #tr_data = getTrainData()
-    tr_data = getBatchTrainData()
+    tr_data = getTrainData()
     item_latent_vec = getMFData()
     
     #设置LSTM模型的参数
     #tr_data[0]为一个batch,tr_data[0][0]为第一个batch中第一个序列的长度，包括用户编号
-    #n_step = len(tr_data[0][0])-2 #最后一个留作训练目标
-    n_step = tr_data.shape[1]-2
+    n_step = len(tr_data[0][0])-2 #最后一个留作训练目标
     
     #这里循环神经网络隐单元的数量与物品隐向量设置为相同(也可不同)
-    lat_vec_size = item_latent_vec.shape[1]
-    hidden_size = 20
+    hidden_size = item_latent_vec.shape[1]
 
     #这里用户数量，为了在模型中基于用户的偏置list的大小
-    #n_user = len(tr_data)
+    n_user = len(tr_data)
 
-    model = LSTM(n_step,lat_vec_size,hidden_size)
+    model = LSTM(n_step=n_step,hidden_size=hidden_size,n_user=n_user)
     
     #训练轮数
-    epoch = 6
-    learning_rate = 0.01
-    batch_size = 5000
+    epoch = 10
+    learning_rate = 0.1
 
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     #在一个session内完成训练与预测
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
 
-        #model.batch_train(sess,tr_data,item_latent_vec,optimizer,epoch)
-        model.batch_train(sess,tr_data,item_latent_vec,optimizer,epoch,batch_size)
+        model.batch_train(sess,tr_data,item_latent_vec,optimizer,epoch)
         ##预测结果以字典保存，关键字为用户编号
         
         te_input,te_target = getTestData()
