@@ -5,7 +5,7 @@ import csv
 import tensorflow as tf
 import numpy as np
 import time
-from reviseOnehotRNN import NetworkModel 
+from onehotRNN import NetworkModel 
 
 rootdir = "/home/lrh/graduation_project/"
 neighbor_k = 10
@@ -99,20 +99,20 @@ def main():
     n_step = tr_data.shape[1]/2-1 
     
     #这里循环神经网络隐单元的大小
-    hidden_size = 10
+    hidden_size = 15
     max_item_index = 3952    
     max_user_index = 6040
 
     item_code_size = max_item_index+1
     u_code_size = max_user_index+1
     r_code_size = 5 
-    beta = 0.1 #正则化系数
+    beta = 0.2 #正则化系数
 
     #参数有:n_step,hidden_size,item_code_size,u_code_size,beta
     model = NetworkModel(n_step,hidden_size,item_code_size,u_code_size,r_code_size,beta)
     
     #训练轮数
-    epoch = 6
+    epoch = 10
     learning_rate = 0.1
 
     print "start train"

@@ -65,7 +65,7 @@ class NetworkModel(object):
         #inputs = tf.reshape(inputs,[-1,hidden_size])
         #inputs = tf.split(0,n_step,inputs)
         #这里rnn的hidden_size与输入数据的大小相同 
-        lstm = tf.nn.rnn_cell.BasicLSTMCell(hidden_size,forget_bias=1.0,state_is_tuple=True)
+        lstm = tf.nn.rnn_cell.BasicLSTMCell(hidden_size,forget_bias=0.5,state_is_tuple=True)
         self.rnn_outputs,_states = tf.nn.rnn(lstm,inputs,dtype=tf.float32)
         
         #now shape is [n_step,batch_size,hidden_size]
