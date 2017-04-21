@@ -99,7 +99,7 @@ def main():
     n_step = tr_data.shape[1]/2-1 
     
     #这里循环神经网络隐单元的大小
-    hidden_size = 100
+    hidden_size = 15
     max_item_index = 3952    
     max_user_index = 6040
 
@@ -152,9 +152,39 @@ def main():
         """   
         pred_res = model.pred(sess,te_input,item_code_size,u_code_size,r_code_size)
 
-        recommed_len = len(te_target[0])
-        recall = evaluate(pred_res,te_target,recommed_len)
-        print "recall is %f"%recall
+        save_rnnres(te_input,pred_res,20)
+        #recommed_len = len(te_target[0])
+        #recall = evaluate(pred_res,te_target,recommed_len)
+        #print "recall is %f"%recall
+
+def save_rnnres(te_input,pred_res,n_rec):
+    #每个用户的历史信息
+    hisfp = open("/home/lrh/graduation_project/data/ml-1m/userbased.train.csv","r") 
+    his = list(csv.reader(hisfp))
+
+    fp = open("/home/lrh/graduation_project/data/ml-1m/rnn_rec_res.csv","w")
+    #writer = csv.writer(fp)
+    n = te_input.shape[0]
+    for i in xrange(n):
+        #每个用户有n_rec个推荐
+        u = te_input[i][0]
+        history = np.asarray(his[i][1:],np.int32)
+        count = 0
+        tmp_list = []
+        rec_list = pred_res[i].argsort()
+        for item in rec_list[-1::-1]:
+            if item not in history:
+                tmp_list.append(item)
+                count += 1
+            if count >= n_rec:
+                break
+        for item in tmp_list:
+            fp.write(str(u)+" "+str(item)+"\n")
+
+
+def rank_recommend():
+    pass
+
 
 
 

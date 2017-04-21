@@ -67,6 +67,9 @@ class NetworkModel(object):
         #这里rnn的hidden_size与输入数据的大小相同 
         lstm = tf.nn.rnn_cell.BasicLSTMCell(hidden_size,forget_bias=0.5,state_is_tuple=True)
         self.rnn_outputs,_states = tf.nn.rnn(lstm,inputs,dtype=tf.float32)
+        #gru = tf.nn.rnn_cell.GRUCell(hidden_size)
+        ##rnn_cell = tf.nn.rnn_cell.BasicRNNCell(hidden_size)
+        #self.rnn_outputs,_states = tf.nn.rnn(gru,inputs,dtype=tf.float32)
         
         #now shape is [n_step,batch_size,hidden_size]
         inner_outputs = tf.pack(self.rnn_outputs) 
