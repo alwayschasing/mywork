@@ -57,6 +57,7 @@ def getTestData():
     """
     test data 每一行为一个用户的测试数据,行首为用户编号,待预测列表大小为10
     """
+    print "get Test Data"
     return data
 
 def predict(users,p_matrix,q_matrix):
@@ -104,7 +105,7 @@ def evaluate(te_data,pred_res):
 
     recall = 0.0
     hit_user = 0
-    for k,v in pred_res:
+    for k,v in enumerate(pred_res):
         hit = 0
         for i in v:
             if i in te_data[k]:
@@ -132,4 +133,6 @@ def main():
     print "recall is %f"%recall
     
 if __name__=="__main__":
-    pass
+    #get_P_Q_matrix()
+    #getTestData()
+    main()
