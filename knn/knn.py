@@ -2,7 +2,9 @@
 # coding=utf-8
 
 import numpy as np
+import cPickle as pickle
 import csv
+import time
 
 
 n_user = 6041
@@ -46,13 +48,16 @@ def getUserSimilarity():
             userSimilarity[u][v] = userSimilarity[v][u]
 
     print userSimilarity.shape
-    return userSimilarity
+    save = open("/home/lrh/graduation_project/KNN/userSimilarity","wb")
+    pickle.dump(userSimilarity,save)
+    #return userSimilarity
 
 
 def userBasedKnn(kN):
 
     rating_matrix = getTrainData() #获得训练数据的评分矩阵
-    userSimilarities = getUserSimilarity(rating_matrix) #得到用户相似度矩阵
+    #userSimilarities = getUserSimilarity(rating_matrix) #得到用户相似度矩阵
+    userSimilarities = pickle.load(open("/home/lrh/graduation_project/KNN/userSimilarity","rb"))
 
     #保存每个用户未知评分的预测结果,顺便剔除了用户看过的电影
     pred_res = np.zeros([n_user,n_item],dtype=np.float32)
@@ -60,7 +65,7 @@ def userBasedKnn(kN):
     for user in range(1,n_user):
         #依次对每个用户进行处理
         for item in range(1,n_item):
-            if rating_matrix[user][item] == 0:
+            if rating_matrix[user][item] == 0.0:
                 #获得对目标电影评过分且距离最近的k个用户
                 neighbors = userSimilarities[user].argsort()
                 neighbor_list = []
@@ -85,7 +90,8 @@ def userBasedKnn(kN):
                 pred = numerator/denominator
 
                 pred_res[user][item] = pred
-
+    save = open("/home/lrh/graduation_project/KNN/pred_res","wb")
+    pickle.dump(pred_res,save)
     return pred_res      
 
 
@@ -117,22 +123,28 @@ def evalRecall(te_data,pred_res):
             recall += float(hit)/n_rec
             hituser += 1
 
-    recall = recall/te_data[0]-1
+    recall = recall/(te_data.shape[0]-1)
+    print "hithuser %d"%hituser
     return recall
 
 def main():
-    kN = 5
-    pred_res = userBasedKnn(kN)
+    #kN = 5
+    #pred_res = userBasedKnn(kN)
 
     te_data = getTestData()
+    pred_res = pickle.load(open("/home/lrh/graduation_project/data/knn/pred_res","rb"))
     recall = evalRecall(te_data,pred_res)
     print "recall is %f"%recall
     
 
 if __name__ == "__main__":
+    start = time.time()
     #getTrainData() 
     #getUserSilimarity()
-    getUserSimilarity()
-    #userBasedKnn()
+    #getUserSimilarity()
+    #userBasedKnn(5)
+    main()
+    end = time.time()
+    print "run %d minautes"%((end-start)/60)
 
     
