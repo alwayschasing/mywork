@@ -13,11 +13,12 @@
 #include<vector>
 #include<pthread.h>
 #include<math.h>
+#include<stdlib.h>
 using namespace std;
 
 //读取训练文件构造rating矩阵并返回
-R_mat ItemBasedKnn::getRatingMatrix(string path){
-    ifstream input(path,ifstream::in);
+void ItemBasedKnn::getRatingMatrix(string path){
+    ifstream input(path.c_str());
     string line;
     while(!input.eof()){
         getline(input,line); 
@@ -30,25 +31,25 @@ R_mat ItemBasedKnn::getRatingMatrix(string path){
             ratingMat.matrix[user][item] = rating;
         }
     }
-    return ratingMat;
+    
 }
 //构造函数
 ItemBasedKnn::ItemBasedKnn(int user,int item):n_user(user),n_item(item){
     //评分矩阵初始化
     ratingMat.n_user = n_user;
     ratingMat.n_item = n_item;
-    ratingMat.matrix = vector<vector<int>>(n_user+1,vector<int>(n_item+1,0));
+    ratingMat.matrix = vector<vector<int> >(n_user+1,vector<int>(n_item+1,0));
 
     //物品相似矩阵初始化
     similarMat.n_item = n_item;
-    similarMat.similar = vector<vector<float>>(n_item+1,vector<float>(n_item+1,0.0));
+    similarMat.similar = vector<vector<float> >(n_item+1,vector<float>(n_item+1,0.0));
     
     //平均值初始化
     avg_ri = vector<float>(n_item+1,0.0);
     //avg_ru = vector<float>(n_user+1,0.0);
 
     //预测结果初始化
-    pred_res = vector<vector<float>>(n_user+1,vector<float>(n_item+1,0.0));
+    pred_res = vector<vector<float> >(n_user+1,vector<float>(n_item+1,0.0));
 }
 //析构函数
 /*
@@ -103,9 +104,9 @@ void ItemBasedKnn::calItemSimilarity(){
 struct parameter{
     int start; //批数据中首个用户
     int batch_size;
-    vector<vector<int>> *mat;
-    vector<vector<float>> *sim;
-    vector<vector<float>> *res;
+    vector<vector<int> > *mat;
+    vector<vector<float> > *sim;
+    vector<vector<float> > *res;
     int k;
 };
 //线程工作函数
@@ -113,9 +114,9 @@ void *threadWork(void *arg){
     parameter *p = (parameter*)arg;
     int start = p->start;
     int batch_size = p->batch_size;
-    vector<vector<int>> *mat = p->mat;
-    vector<vector<float>> *sim = p->sim;
-    vector<vector<float>> *res = p->res;
+    vector<vector<int> > *mat = p->mat;
+    vector<vector<float> > *sim = p->sim;
+    vector<vector<float> > *res = p->res;
     int k = p->k;
     int end = start+batch_size-1;
     int n_item = (*sim)[0].size()-1;

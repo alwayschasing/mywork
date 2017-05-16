@@ -8,6 +8,7 @@
 #include"utility.h"
 #include<vector>
 #include<algorithm>
+#include<string>
 using namespace std;
 
 vector<int> split2int(string line,char dim){
@@ -30,7 +31,7 @@ vector<int> argsort(vector<float> &a){
     for(int i = 0; i < ln; ++i){
         arg[i] = i;
     }
-    sort(arg.begin(),arg.end(),[&a](int p,int q){return a[p]<a[q];});
+    sort(arg.begin(),arg.end(),[&a](int p,int q){return a[p]>a[q];});
     return arg;
 }
 

@@ -15,13 +15,13 @@ using namespace std;
 struct R_mat{
     int n_user;
     int n_item;
-    vector<vector<int>> matrix;
+    vector<vector<int> > matrix;
     R_mat():n_user(0),n_item(0){};
 };
 
 struct ItemSimilarities{
     int n_item;
-    vector<vector<float>> similar;
+    vector<vector<float> > similar;
     ItemSimilarities():n_item(0){};
 };
 
@@ -29,9 +29,11 @@ class ItemBasedKnn{
 public:
     R_mat ratingMat;
     ItemSimilarities similarMat;
-    R_mat getRatingMatrix(string path);
+    vector<vector<float> > pred_res;//评分预测结果
+
+    void getRatingMatrix(string path);
     ItemBasedKnn(int user,int item);
-    ~ItemBasedKnn();
+    //~ItemBasedKnn();
 
     //计算物品相似度
     void calItemSimilarity();
@@ -46,7 +48,6 @@ private:
     int n_item;
     vector<float> avg_ri;
     //vector<float> avg_ru;
-    vector<vector<float>> pred_res;//评分预测结果
     
     //计算物品i,j的距离
     void calPearsonDist(int i,int j);
