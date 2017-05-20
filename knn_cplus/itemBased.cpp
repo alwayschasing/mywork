@@ -14,20 +14,21 @@
 #include<pthread.h>
 #include<math.h>
 #include<stdlib.h>
+#include<map>
 using namespace std;
 
 //读取训练文件构造rating矩阵并返回
 void ItemBasedKnn::getRatingMatrix(string path){
     ifstream input(path.c_str());
-    string line;
-    while(!input.eof()){
-        getline(input,line); 
+    string line = "";
+    while(getline(input,line)){
+        //getline(input,line); 
         vector<int> temp = split2int(line,','); 
         int user = temp[0];
         int n = temp.size()/2;
         for(int i = 0; i < n; ++i){
             int item = temp[(i<<1)+1];
-            int rating = temp[(i<<2)+2];
+            int rating = temp[(i<<1)+2];
             ratingMat.matrix[user][item] = rating;
         }
     }
@@ -60,7 +61,7 @@ ItemBasedKnn::~ItemBasedKnn(){
 //计算物品相似度,得到物品相似度矩阵
 void ItemBasedKnn::calPearsonDist(int i,int j){
     vector<int> u_set;
-    for(int u = 1; i <= n_user; ++u){
+    for(int u = 1; u <= n_user; ++u){
         if(ratingMat.matrix[u][i]&&ratingMat.matrix[u][j]){
             u_set.push_back(u);
         }
@@ -90,7 +91,7 @@ void ItemBasedKnn::calItemSimilarity(){
             calPearsonDist(i,j);
         }
     }
-    for(int i = n_item; i >= 1; ++i){
+    for(int i = n_item; i >= 1; --i){
         for(int j = i-1; j >= 1; --j){
             similarMat.similar[i][j] = similarMat.similar[j][i];
         }
@@ -126,7 +127,7 @@ void *threadWork(void *arg){
         for(int j = 1; j <=n_item; ++j){
             if((*res)[i][j] == 0){
                 int neighbor = 0;
-                vector<int> indexs = argsort((*sim)[i]); 
+                vector<int> indexs = argsort((*sim)[j]); 
                 vector<int> neighbor_set(k,0);
                 for(int index:indexs){
                     if((*mat)[i][index] != 0){
@@ -138,11 +139,11 @@ void *threadWork(void *arg){
                 if(neighbor < k) continue;
                 float a = 0.0;
                 for(int p = 0; p < k; p++){
-                    a = a + (*sim)[i][neighbor_set[p]]*(*mat)[i][neighbor_set[p]];
+                    a = a + (*sim)[j][neighbor_set[p]]*(*mat)[i][neighbor_set[p]];
                 }
                 float b = 0.0;
                 for(int p = 0; p < k; p++){
-                    b += fabs((*sim)[i][neighbor_set[p]]);
+                    b += fabs((*sim)[j][neighbor_set[p]]);
                 }
                 (*res)[i][j] = a/b;
             }

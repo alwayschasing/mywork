@@ -3,7 +3,7 @@ CC = g++
 
 objects = run.o itemBased.o utility.o
 
-CFLAGS = --std=c++11
+CFLAGS = -g --std=c++11
 
 KNNRecommend:$(objects)
 	$(CC) $(CFLAGS) -o KNNRecommend $(objects) -lpthread

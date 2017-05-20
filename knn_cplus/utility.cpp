@@ -18,6 +18,7 @@ vector<int> split2int(string line,char dim){
     while(p<len){
         if(line[p] == dim){
             res.push_back(stoi(line.substr(start,p-start)));
+            start = p+1;
         }
         p++;
     }

@@ -10,14 +10,15 @@
 #include<iostream>
 #include<fstream>
 #include<vector>
+#include<time.h>
 using namespace std;
 
 
 void getTestData(vector<vector<int> >& te_data){
     ifstream input("/home/lrh/graduation_project/data/ml-1m/userbased.test.csv");
-    string line;
-    while(!input.eof()){
-        getline(input,line); 
+    string line = "";
+    while(getline(input,line)){
+        //getline(input,line); 
         vector<int> temp = split2int(line,',');
         for(int i = 1; i < temp.size(); ++i){
             te_data[0][i-1] = temp[i];
@@ -56,6 +57,7 @@ float eval(vector<vector<int> >& te_data,vector<vector<int> >& rec){
 }
 
 int main(){
+    time_t start = time(NULL);
     string tr_dataPath = "/home/lrh/graduation_project/data/ml-1m/userbased.trainMF.csv";
     int n_thread = 40;
     int n_user = 6040;
@@ -63,6 +65,7 @@ int main(){
     ItemBasedKnn itemknn(n_user,n_item);
     itemknn.getRatingMatrix(tr_dataPath);
     itemknn.calItemSimilarity();
+    cout<<"start pred"<<endl;
     itemknn.pred(n_thread,5);
 
     vector<vector<int> > rec_res(n_user+1,vector<int>(10,0));
@@ -72,7 +75,11 @@ int main(){
     getTestData(te_data);
 
     float recall = 0.0;
+    cout<<"start eval"<<endl;
     recall = eval(te_data,rec_res);
+    cout<<recall<<endl;
+    time_t end = time(NULL);
+    cout<<"run "<<(end-start)/60<<" minutes"<<endl;
     return 0; 
 }
 
