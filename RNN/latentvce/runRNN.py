@@ -133,7 +133,7 @@ def evaluate(pred_res,target,item_latent_vec):
         #返回的推荐为用户编号
         #该用户的历史列表，转换为整数型
         his = np.asarray(userhistory[k][1:],np.int32)
-        recommed = knn(v,item_latent_vec,20,his)
+        recommed = knn(v,item_latent_vec,10,his)
         writer.writerow(recommed)
         hit = 0
         for i in recommed:
@@ -143,8 +143,6 @@ def evaluate(pred_res,target,item_latent_vec):
             hituser += 1
         recall += float(hit)/n_target
     print "hituser:%d"%hituser 
-    averec = recall/hituser
-    print "relhit averec:%f"%averec
     recall = recall/n_user 
     savefp.close()
     return recall
@@ -169,7 +167,7 @@ def main():
     model = LSTM(n_step=n_step,hidden_size=hidden_size,n_user=n_user)
     
     #训练轮数
-    epoch = 10
+    epoch = 3
     learning_rate = 0.1
 
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
