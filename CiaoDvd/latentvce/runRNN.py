@@ -11,7 +11,7 @@ rootdir = "/home/lrh/graduation_project/"
 neighbor_k = 10
 
 def getMFData():
-    fpin = open("/home/lrh/graduation_project/MF/MFModel","r")
+    fpin = open("/home/lrh/graduation_project/CiaoDvd/MFModel","r")
     lines = fpin.readlines()
     num = len(lines)
     
@@ -120,13 +120,13 @@ def evaluate(pred_res,target,item_latent_vec):
     以k近邻来选择推荐
     n_user为用户数量
     """
-    fp = open("/home/lrh/graduation_project/data/ml-1m/userbased.train.csv","r")
+    fp = open("/home/lrh/graduation_project/data/CiaoDVD/finUserBasedTrain.csv","r")
     userhistory = list(csv.reader(fp))
     recall = 0.0
     n_user = len(pred_res)
     #预测目标的个数
     n_target= len(target[0])
-    savefp = open("/home/lrh/graduation_project/data/ml-1m/predicted_res.csv","w")
+    savefp = open("/home/lrh/graduation_project/data/CiaoDVD/predicted_res.csv","w")
     writer = csv.writer(savefp)
     hituser = 0
     for k,v in enumerate(pred_res):
@@ -167,7 +167,7 @@ def main():
     model = LSTM(n_step=n_step,hidden_size=hidden_size,n_user=n_user)
     
     #训练轮数
-    epoch = 6
+    epoch = 3
     learning_rate = 0.1
 
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
