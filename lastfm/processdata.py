@@ -11,7 +11,7 @@ def getUserBasedData():
     每个用户对应一个字典,字典又对应一个字典,存的item,time对
     """
     user_set = dict()
-    origin = open("/home/lrh/graduation_project/data/CiaoDVD/original/movie-ratings.txt")
+    origin = open("/home/lrh/graduation_project/data/")
     reader = csv.reader(origin)
     for line in reader:
         u = line[0]
