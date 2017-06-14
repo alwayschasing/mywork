@@ -8,7 +8,7 @@ import csv
 """
 
 def get_P_Q_matrix():
-    fp = open("/home/lrh/graduation_project/CiaoDvd/MFModel","r")
+    fp = open("/home/lrh/graduation_project/lastfm/MFModel","r")
     lines = fp.readlines()
     n_line = len(lines)
     max_n_user = 0
@@ -50,7 +50,7 @@ def get_P_Q_matrix():
     return p_matrix,q_matrix
 
 def getTestData():
-    fp = open("/home/lrh/graduation_project/data/CiaoDVD/finUserBasedTest.csv","r")
+    fp = open("/home/lrh/graduation_project/data/lastmf/finUserBasedTest.csv","r")
     reader = csv.reader(fp)
     data = list(reader)
     data = np.asarray(data,dtype=np.int32)
@@ -76,7 +76,7 @@ def predict(users,p_matrix,q_matrix):
     """
     去掉用户历史记录中的物品
     """
-    h_fp = open("/home/lrh/graduation_project/data/CiaoDVD/finUserBasedTrain.csv","r")
+    h_fp = open("/home/lrh/graduation_project/data/lastmf/finUserBasedTrain.csv","r")
     his = list(csv.reader(h_fp))
 
 

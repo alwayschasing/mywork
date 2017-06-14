@@ -10,7 +10,7 @@ from rnn import LSTM
 neighbor_k = 10
 
 def getMFData():
-    fpin = open("/home/lrh/graduation_project/CiaoDvd/MFModel","r")
+    fpin = open("/home/lrh/graduation_project/lastfm/MFModel","r")
     lines = fpin.readlines()
     num = len(lines)
     
@@ -51,7 +51,7 @@ def getTrainData():
     [batch_size]
     return [n_user,batch_size(不同用户大小不一样),vec_size]
     """
-    fpin = open("/home/lrh/graduation_project/data/CiaoDVD/rnndata1.csv","r")
+    fpin = open("/home/lrh/graduation_project/data/lastmf/rnndata1.csv","r")
     lines = list(csv.reader(fpin))
     training_data = []
     n = len(lines)
@@ -70,7 +70,7 @@ def getTrainData():
     return training_data
 
 def getTestData():
-    fp = open("/home/lrh/graduation_project/data/CiaoDVD/rnntestdata.csv","r")
+    fp = open("/home/lrh/graduation_project/data/lastmf/rnntestdata.csv","r")
     reader = csv.reader(fp)
     te_data = list(reader)
     te_data = np.asarray(te_data,dtype=np.int32)
@@ -119,13 +119,13 @@ def evaluate(pred_res,target,item_latent_vec):
     以k近邻来选择推荐
     n_user为用户数量
     """
-    fp = open("/home/lrh/graduation_project/data/CiaoDVD/finUserBasedTrain.csv","r")
+    fp = open("/home/lrh/graduation_project/data/lastmf/finUserBasedTrain.csv","r")
     userhistory = list(csv.reader(fp))
     recall = 0.0
     n_user = len(pred_res)
     #预测目标的个数
     n_target= len(target[0])
-    savefp = open("/home/lrh/graduation_project/data/CiaoDVD/predicted_res.csv","w")
+    savefp = open("/home/lrh/graduation_project/data/lastmf/predicted_res.csv","w")
     writer = csv.writer(savefp)
     hituser = 0
     for k,v in enumerate(pred_res):

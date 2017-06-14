@@ -3,8 +3,8 @@
 import csv
 
 def getRNNtr_data():
-    fp = open("/home/lrh/graduation_project/data/CiaoDVD/finUserBasedTrain.csv","r")
-    sa = open("/home/lrh/graduation_project/data/CiaoDVD/rnndata1.csv","w")
+    fp = open("/home/lrh/graduation_project/data/lastmf/finUserBasedTrain.csv","r")
+    sa = open("/home/lrh/graduation_project/data/lastmf/rnndata1.csv","w")
     writer = csv.writer(sa)
     lines = fp.readlines()
     timestepsize = 10
@@ -60,9 +60,9 @@ def getRNNtr_dataAll():
     fp.close()
     sa.close()
 def getRNNte_data():
-    fp1 = open("/home/lrh/graduation_project/data/CiaoDVD/finUserBasedTrain.csv","r")
-    fp2 = open("/home/lrh/graduation_project/data/CiaoDVD/finUserBasedTest.csv","r")
-    fpwrite = open("/home/lrh/graduation_project/data/CiaoDVD/rnntestdata.csv","w")
+    fp1 = open("/home/lrh/graduation_project/data/lastmf/finUserBasedTrain.csv","r")
+    fp2 = open("/home/lrh/graduation_project/data/lastmf/finUserBasedTest.csv","r")
+    fpwrite = open("/home/lrh/graduation_project/data/lastmf/rnntestdata.csv","w")
     
     content1 = fp1.readlines()
     content2 = fp2.readlines()
